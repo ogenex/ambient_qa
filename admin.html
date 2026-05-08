@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Survey Results · Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:    #1a1a1a;
+      --ink-2:  #555;
+      --ink-3:  #999;
+      --line:   #e8e8e8;
+      --line-2: #d0d0d0;
+      --bg:     #f5f5f2;
+      --white:  #ffffff;
+      --accent: #1a1a1a;
+      --blue-bg:#eef4fd;
+      --blue:   #2563eb;
+      --radius: 10px;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      color: var(--ink);
+    }
+
+    /* ── Login gate ── */
+    .gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .gate-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+    .gate-card h1 {
+      font-size: 20px;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+    }
+    .gate-card p {
+      font-size: 14px;
+      color: var(--ink-3);
+      margin-bottom: 1.5rem;
+    }
+    .gate-card input {
+      width: 100%;
+      font-size: 15px;
+      padding: 11px 14px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      outline: none;
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .gate-card input:focus { border-color: var(--ink); }
+    .gate-card button {
+      width: 100%;
+      padding: 12px;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .gate-card button:hover { opacity: 0.82; }
+    .gate-error {
+      font-size: 13px;
+      color: #c0392b;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .topbar-meta {
+      font-size: 13px;
+      color: var(--ink-3);
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn-refresh {
+      padding: 7px 14px;
+      border: 1px solid var(--line-2);
+      border-radius: 8px;
+      background: var(--white);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-refresh:hover { border-color: var(--ink); }
+    .btn-export {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 8px;
+      background: var(--ink);
+      color: var(--white);
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .btn-export:hover { opacity: 0.82; }
+
+    .content {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Stat cards ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+    .stat-label {
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--ink-3);
+    }
+
+    /* ── Charts row ── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 2rem;
+    }
+    @media (max-width: 700px) {
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+    .chart-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
+    .chart-heading {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      margin-bottom: 0.25rem;
+    }
+    .chart-sub {
+      font-size: 12px;
+      color: var(--ink-3);
+      margin-bottom: 1.25rem;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 200px;
+    }
+
+    /* ── Satisfaction bar ── */
+    .sat-bars { display: flex; flex-direction: column; gap: 8px; }
+    .sat-row { display: flex; align-items: center; gap: 10px; }
+    .sat-label {
+      font-size: 13px;
+      color: var(--ink-2);
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .sat-track {
+      flex: 1;
+      height: 10px;
+      background: var(--line);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .sat-fill {
+      height: 100%;
+      background: var(--ink);
+      border-radius: 5px;
+      transition: width 0.6s ease;
+    }
+    .sat-count {
+      font-size: 12px;
+      color: var(--ink-3);
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Challenges bar chart ── */
+    .challenge-bars { display: flex; flex-direction: column; gap: 8px; }
+    .chal-row { display: flex; align-items: center; gap: 10px; }
+    .chal-label {
+      font-size: 12px;
+      color: var(--ink-2);
+      width: 200px;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+    .chal-track {
+      flex: 1;
+      height: 8px;
+      background: var(--line);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .chal-fill {
+      height: 100%;
+      background: #555;
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+    .chal-pct {
+      font-size: 12px;
+      color: var(--ink-3);
+      width: 32px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Responses table ── */
+    .section-heading {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 0.75rem;
+    }
+    .table-wrap {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      background: #fafaf8;
+      border-bottom: 1px solid var(--line);
+    }
+    tbody tr { border-bottom: 1px solid var(--line); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafaf8; }
+    tbody td { padding: 11px 14px; color: var(--ink); vertical-align: top; }
+    .td-name { font-weight: 500; min-width: 100px; }
+    .td-dept {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--bg);
+      font-size: 12px;
+      color: var(--ink-2);
+    }
+    .sat-pill {
+      display: inline-block;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--white);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 26px;
+    }
+    .td-suggestion {
+      max-width: 300px;
+      line-height: 1.5;
+      color: var(--ink-2);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--ink-3);
+      font-size: 14px;
+    }
+    .loading-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--ink-3);
+      font-size: 14px;
+    }
+    .ts-cell {
+      font-size: 12px;
+      color: var(--ink-3);
+      white-space: nowrap;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      display: inline-block;
+      font-size: 13px;
+      color: var(--ink-3);
+      text-decoration: none;
+      margin-top: 1.5rem;
+    }
+    .back-link:hover { color: var(--ink); }
+  </style>
+</head>
+<body>
+
+<!-- ── Login gate ── -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h1>Admin access</h1>
+    <p>Enter the admin password to view survey results.</p>
+    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" />
+    <button onclick="checkPw()">View results →</button>
+    <div class="gate-error" id="pw-err">Incorrect password — try again.</div>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-title">Survey results</div>
+    <div class="topbar-actions">
+      <span class="topbar-meta" id="last-updated"></span>
+      <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+      <button class="btn-export" onclick="exportCSV()">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stat cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total responses</div>
+        <div class="stat-value" id="s-total">—</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg satisfaction</div>
+        <div class="stat-value" id="s-avg">—</div>
+        <div class="stat-sub">out of 5</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top department</div>
+        <div class="stat-value" id="s-top-dept" style="font-size:18px;margin-top:4px;">—</div>
+        <div class="stat-sub">most responses</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Suggestions given</div>
+        <div class="stat-value" id="s-suggestions">—</div>
+        <div class="stat-sub">written responses</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <!-- Satisfaction distribution -->
+      <div class="chart-card">
+        <div class="chart-heading">Satisfaction scores</div>
+        <div class="chart-sub">Distribution across all responses</div>
+        <div id="sat-bars" class="sat-bars"></div>
+      </div>
+
+      <!-- Department breakdown -->
+      <div class="chart-card">
+        <div class="chart-heading">Responses by department</div>
+        <div class="chart-sub">Share of total submissions</div>
+        <div class="chart-wrap">
+          <canvas id="dept-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Challenges -->
+    <div class="chart-card" style="margin-bottom: 2rem;">
+      <div class="chart-heading">Top challenges</div>
+      <div class="chart-sub">What respondents selected most</div>
+      <div id="chal-bars" class="challenge-bars" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- Responses table -->
+    <div class="section-heading">All responses</div>
+    <div class="table-wrap">
+      <div id="table-body">
+        <div class="loading-state">Loading…</div>
+      </div>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to survey</a>
+  </div>
+</div>
+
+<script>
+// ── Auth ────────────────────────────────────────────────────────────────────
+function checkPw() {
+  const val = document.getElementById('pw-input').value;
+  if (val === CONFIG.adminPassword) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('pw-err').style.display = 'block';
+  }
+}
+
+// ── Supabase ────────────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const db = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+
+let allRows = [];
+let deptChart = null;
+
+async function loadData() {
+  document.getElementById('table-body').innerHTML = '<div class="loading-state">Loading…</div>';
+
+  const { data, error } = await db
+    .from('survey_responses')
+    .select('*')
+    .order('submitted_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('table-body').innerHTML =
+      `<div class="empty-state" style="color:#c0392b;">Error loading data: ${error.message}</div>`;
+    return;
+  }
+
+  allRows = data || [];
+  document.getElementById('last-updated').textContent =
+    'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  renderDashboard(allRows);
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+function renderDashboard(rows) {
+  const n = rows.length;
+
+  // Stat cards
+  document.getElementById('s-total').textContent = n;
+
+  const avgSat = n
+    ? (rows.reduce((s, r) => s + r.satisfaction, 0) / n).toFixed(1)
+    : '—';
+  document.getElementById('s-avg').textContent = avgSat;
+
+  const deptCounts = {};
+  rows.forEach(r => { deptCounts[r.department] = (deptCounts[r.department] || 0) + 1; });
+  const topDept = n
+    ? Object.entries(deptCounts).sort((a,b) => b[1]-a[1])[0][0]
+    : '—';
+  document.getElementById('s-top-dept').textContent = topDept;
+
+  const suggestions = rows.filter(r => r.suggestion && r.suggestion.trim().length > 0).length;
+  document.getElementById('s-suggestions').textContent = suggestions;
+
+  // Satisfaction bars
+  const satCounts = {1:0,2:0,3:0,4:0,5:0};
+  rows.forEach(r => { satCounts[r.satisfaction]++; });
+  const satMax = Math.max(...Object.values(satCounts), 1);
+  document.getElementById('sat-bars').innerHTML = [5,4,3,2,1].map(v => `
+    <div class="sat-row">
+      <span class="sat-label">${v}</span>
+      <div class="sat-track">
+        <div class="sat-fill" style="width:${Math.round((satCounts[v]/satMax)*100)}%"></div>
+      </div>
+      <span class="sat-count">${satCounts[v]}</span>
+    </div>`).join('');
+
+  // Department doughnut
+  const deptLabels = Object.keys(deptCounts);
+  const deptVals   = deptLabels.map(k => deptCounts[k]);
+  const palette = ['#1a1a1a','#555','#888','#bbb','#ddd','#f0f0f0','#e0e0e0'];
+  if (deptChart) deptChart.destroy();
+  const ctx = document.getElementById('dept-chart').getContext('2d');
+  deptChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: deptLabels,
+      datasets: [{ data: deptVals, backgroundColor: palette.slice(0, deptLabels.length), borderWidth: 0 }],
+    },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'right', labels: { font: { size: 12 }, color: '#555', boxWidth: 10, padding: 12 } },
+      },
+    },
+  });
+
+  // Challenges
+  const CHALLENGES = [
+    'Too many meetings / not enough focus time',
+    'Unclear priorities or shifting goals',
+    'Lack of tools or resources',
+    'Cross-team communication gaps',
+    'Workload is too high',
+    'Something else',
+  ];
+  const chalCounts = {};
+  rows.forEach(r => { chalCounts[r.challenge] = (chalCounts[r.challenge] || 0) + 1; });
+  const chalMax = Math.max(...Object.values(chalCounts), 1);
+  document.getElementById('chal-bars').innerHTML = CHALLENGES
+    .sort((a,b) => (chalCounts[b]||0) - (chalCounts[a]||0))
+    .map(c => {
+      const cnt = chalCounts[c] || 0;
+      const pct = n ? Math.round((cnt/n)*100) : 0;
+      return `<div class="chal-row">
+        <span class="chal-label">${c}</span>
+        <div class="chal-track">
+          <div class="chal-fill" style="width:${Math.round((cnt/chalMax)*100)}%"></div>
+        </div>
+        <span class="chal-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+
+  // Table
+  if (rows.length === 0) {
+    document.getElementById('table-body').innerHTML =
+      '<div class="empty-state">No responses yet — share the survey link with your team!</div>';
+    return;
+  }
+
+  const thead = `<thead><tr>
+    <th>Name</th>
+    <th>Department</th>
+    <th>Satisfaction</th>
+    <th>Challenge</th>
+    <th>Suggestion</th>
+    <th>Submitted</th>
+  </tr></thead>`;
+
+  const tbody = '<tbody>' + rows.map(r => {
+    const ts = new Date(r.submitted_at).toLocaleDateString('en-AU', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    });
+    return `<tr>
+      <td class="td-name">${r.name || '<span style="color:#bbb">anonymous</span>'}</td>
+      <td><span class="td-dept">${r.department}</span></td>
+      <td><span class="sat-pill">${r.satisfaction}</span></td>
+      <td style="font-size:12px;color:#555;max-width:180px;line-height:1.4;">${r.challenge}</td>
+      <td class="td-suggestion">${r.suggestion || '<span style="color:#ccc">—</span>'}</td>
+      <td class="ts-cell">${ts}</td>
+    </tr>`;
+  }).join('') + '</tbody>';
+
+  document.getElementById('table-body').innerHTML = `<table>${thead}${tbody}</table>`;
+}
+
+// ── CSV export ──────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!allRows.length) { alert('No data to export yet.'); return; }
+  const headers = ['id','submitted_at','name','department','satisfaction','challenge','suggestion'];
+  const csvRows = [
+    headers.join(','),
+    ...allRows.map(r => headers.map(h => {
+      const v = r[h] ?? '';
+      return `"${String(v).replace(/"/g, '""')}"`;
+    }).join(','))
+  ];
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `survey-results-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>

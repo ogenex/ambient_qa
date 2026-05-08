@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Pulse Survey</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:    #1a1a1a;
+      --ink-2:  #555;
+      --ink-3:  #999;
+      --line:   #e8e8e8;
+      --line-2: #d0d0d0;
+      --bg:     #fafaf8;
+      --white:  #ffffff;
+      --accent: #1a1a1a;
+      --green:  #1a7a4a;
+      --green-bg: #edf7f1;
+      --radius: 10px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Georgia', serif;
+      color: var(--ink);
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 2.5rem 2.5rem 2rem;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* ── Header ── */
+    .survey-header {
+      margin-bottom: 2rem;
+    }
+    .survey-tag {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 0.6rem;
+    }
+    .survey-title {
+      font-size: 22px;
+      font-weight: normal;
+      line-height: 1.3;
+      margin-bottom: 0.4rem;
+    }
+    .survey-desc {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      color: var(--ink-2);
+      line-height: 1.6;
+    }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      margin-bottom: 2rem;
+    }
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      color: var(--ink-3);
+      margin-bottom: 8px;
+    }
+    .progress-track {
+      height: 2px;
+      background: var(--line);
+      border-radius: 1px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--ink);
+      border-radius: 1px;
+      transition: width 0.35s ease;
+    }
+
+    /* ── Questions ── */
+    .q-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-3);
+      margin-bottom: 0.5rem;
+    }
+    .q-text {
+      font-size: 18px;
+      font-weight: normal;
+      line-height: 1.45;
+      margin-bottom: 0.35rem;
+      color: var(--ink);
+    }
+    .q-hint {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      color: var(--ink-3);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    /* ── Text Input ── */
+    input[type="text"], textarea, select {
+      width: 100%;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 15px;
+      padding: 11px 14px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: var(--ink);
+    }
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23999' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+
+    /* ── Scale ── */
+    .scale-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .scale-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      background: var(--white);
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink-2);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .scale-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .scale-btn.on {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: var(--white);
+    }
+    .scale-ends {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: var(--ink-3);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Option Buttons ── */
+    .option-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      background: var(--white);
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .option-btn:hover { border-color: var(--ink); }
+    .option-btn.on {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    /* ── Nav ── */
+    .nav-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+    }
+    .btn-next {
+      flex: 1;
+      padding: 12px 20px;
+      background: var(--ink);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-next:hover { opacity: 0.82; }
+    .btn-next:disabled { opacity: 0.35; cursor: default; }
+    .btn-back {
+      padding: 12px 16px;
+      background: transparent;
+      color: var(--ink-2);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-back:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ── Thank you ── */
+    .thankyou {
+      text-align: center;
+      padding: 1rem 0;
+    }
+    .thankyou-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--green-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-size: 24px;
+    }
+    .thankyou h2 {
+      font-size: 22px;
+      font-weight: normal;
+      margin-bottom: 0.5rem;
+    }
+    .thankyou p {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 14px;
+      color: var(--ink-2);
+      line-height: 1.6;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+
+    /* ── Error ── */
+    .error-msg {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      color: #c0392b;
+      margin-top: 0.75rem;
+      display: none;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      color: var(--ink-3);
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    .footer a { color: var(--ink-3); }
+
+    @media (max-width: 540px) {
+      .card { padding: 1.75rem 1.25rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="card" id="card">
+    <!-- injected by JS -->
+  </div>
+  <div class="footer">
+    Responses stored securely · <a href="admin.html">Admin</a>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+const db = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+
+// ── Survey definition ──────────────────────────────────────────
+const QUESTIONS = [
+  {
+    id: 'name',
+    type: 'text',
+    text: 'What\'s your name?',
+    hint: 'First name is fine — this helps us follow up if needed.',
+    placeholder: 'e.g. Alex',
+    optional: true,
+  },
+  {
+    id: 'department',
+    type: 'select',
+    text: 'Which team or department are you in?',
+    hint: '',
+    options: ['Engineering', 'Design', 'Product', 'Marketing', 'Operations', 'Finance', 'Other'],
+  },
+  {
+    id: 'satisfaction',
+    type: 'scale',
+    text: 'How satisfied are you with team communication right now?',
+    hint: '1 = very dissatisfied, 5 = very satisfied.',
+    min: 'Very dissatisfied',
+    max: 'Very satisfied',
+  },
+  {
+    id: 'challenge',
+    type: 'options',
+    text: 'What is your biggest challenge at the moment?',
+    hint: 'Choose the one that fits best.',
+    options: [
+      'Too many meetings / not enough focus time',
+      'Unclear priorities or shifting goals',
+      'Lack of tools or resources',
+      'Cross-team communication gaps',
+      'Workload is too high',
+      'Something else',
+    ],
+  },
+  {
+    id: 'suggestion',
+    type: 'textarea',
+    text: 'What\'s one thing we could do to improve how the team works?',
+    hint: 'Optional — but your candid input makes a real difference.',
+    placeholder: 'Share your idea or feedback…',
+    optional: true,
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────
+let step = 0;
+const answers = {};
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  if (step >= QUESTIONS.length) { renderDone(); return; }
+  const q = QUESTIONS[step];
+  const pct = Math.round((step / QUESTIONS.length) * 100);
+
+  let body = '';
+
+  // Header (shown on first step only)
+  if (step === 0) {
+    body += `
+      <div class="survey-header">
+        <div class="survey-tag">Team Pulse · Q2 2026</div>
+        <div class="survey-title">Quick team check-in</div>
+        <div class="survey-desc">5 questions · takes about 2 minutes · responses are anonymous</div>
+      </div>`;
+  }
+
+  // Progress
+  body += `
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span>Question ${step + 1} of ${QUESTIONS.length}</span>
+        <span>${pct}% complete</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+
+  // Question
+  body += `<div class="q-label">Q${step + 1}</div>`;
+  body += `<div class="q-text">${q.text}</div>`;
+  if (q.hint) body += `<div class="q-hint">${q.hint}</div>`;
+
+  // Input
+  if (q.type === 'text') {
+    body += `<input type="text" id="ans" placeholder="${q.placeholder}" value="${answers[q.id] || ''}" />`;
+  } else if (q.type === 'textarea') {
+    body += `<textarea id="ans" placeholder="${q.placeholder}">${answers[q.id] || ''}</textarea>`;
+  } else if (q.type === 'select') {
+    body += `<select id="ans">
+      <option value="">— select one —</option>
+      ${q.options.map(o => `<option value="${o}"${answers[q.id] === o ? ' selected' : ''}>${o}</option>`).join('')}
+    </select>`;
+  } else if (q.type === 'scale') {
+    body += `<div class="scale-row">
+      ${[1,2,3,4,5].map(n => `<button class="scale-btn${answers[q.id] === n ? ' on' : ''}" onclick="pickScale(${n})">${n}</button>`).join('')}
+    </div>
+    <div class="scale-ends"><span>${q.min}</span><span>${q.max}</span></div>`;
+  } else if (q.type === 'options') {
+    body += q.options.map(o =>
+      `<button class="option-btn${answers[q.id] === o ? ' on' : ''}" onclick="pickOption('${o.replace(/'/g, "\\'")}')">${o}</button>`
+    ).join('');
+  }
+
+  body += `<div class="error-msg" id="err">Please answer this question to continue.</div>`;
+
+  // Nav
+  body += `<div class="nav-row">`;
+  if (step > 0) body += `<button class="btn-back" onclick="goBack()">← Back</button>`;
+  const isLast = step === QUESTIONS.length - 1;
+  body += `<button class="btn-next" id="btn-next" onclick="goNext()">${isLast ? 'Submit survey →' : 'Next →'}</button>`;
+  body += `</div>`;
+
+  document.getElementById('card').innerHTML = body;
+}
+
+function pickScale(n) {
+  answers[QUESTIONS[step].id] = n;
+  render();
+}
+
+function pickOption(val) {
+  answers[QUESTIONS[step].id] = val;
+  render();
+}
+
+function goBack() {
+  if (step > 0) { step--; render(); }
+}
+
+function goNext() {
+  const q = QUESTIONS[step];
+
+  // Read text/textarea/select answers
+  if (['text','textarea','select'].includes(q.type)) {
+    const el = document.getElementById('ans');
+    if (el) answers[q.id] = el.value.trim();
+  }
+
+  // Validate required
+  const val = answers[q.id];
+  if (!q.optional && (val === undefined || val === '' || val === null)) {
+    const err = document.getElementById('err');
+    if (err) { err.style.display = 'block'; }
+    return;
+  }
+
+  step++;
+  if (step >= QUESTIONS.length) {
+    submitSurvey();
+  } else {
+    render();
+  }
+}
+
+// ── Submit ─────────────────────────────────────────────────────
+async function submitSurvey() {
+  // Show loading state
+  document.getElementById('card').innerHTML = `
+    <div style="text-align:center; padding: 3rem 0;">
+      <div style="font-family:'Helvetica Neue',sans-serif; font-size:14px; color:#999;">Submitting your response…</div>
+    </div>`;
+
+  const payload = {
+    name:         answers.name         || null,
+    department:   answers.department,
+    satisfaction: answers.satisfaction,
+    challenge:    answers.challenge,
+    suggestion:   answers.suggestion   || null,
+  };
+
+  const { error } = await db.from('survey_responses').insert([payload]);
+
+  if (error) {
+    document.getElementById('card').innerHTML = `
+      <div style="text-align:center; padding:2rem 0;">
+        <div style="font-family:'Helvetica Neue',sans-serif; font-size:14px; color:#c0392b; margin-bottom:1rem;">
+          Something went wrong — please try again.
+        </div>
+        <div style="font-family:'Helvetica Neue',sans-serif; font-size:12px; color:#bbb;">${error.message}</div>
+        <button class="btn-next" style="max-width:180px;margin:1.5rem auto 0;display:block;" onclick="step=0;render()">Start over</button>
+      </div>`;
+    return;
+  }
+
+  renderDone();
+}
+
+// ── Thank you ──────────────────────────────────────────────────
+function renderDone() {
+  document.getElementById('card').innerHTML = `
+    <div class="thankyou">
+      <div class="thankyou-icon">✓</div>
+      <h2>Thank you!</h2>
+      <p>Your response has been recorded. We really appreciate you taking the time — your input helps the team improve.</p>
+    </div>`;
+}
+
+// ── Init ───────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
