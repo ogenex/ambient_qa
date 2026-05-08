@@ -1,448 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Survey Results · Admin</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <script src="config.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survey Admin — Results</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#1a1714;--ink-2:#4a4540;--ink-3:#8a8480;--surface:#f5f4f0;--surface-2:#eeece6;--surface-3:#e8e4dc;--white:#ffffff;--accent:#c4602a;--accent-light:#fdf0e8;--accent-mid:#f0c4a0;--border:#dcd8d0;--border-strong:#c8c2b8;--radius:6px;--radius-lg:10px}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;font-size:14px}
 
-    :root {
-      --ink:    #1a1a1a;
-      --ink-2:  #555;
-      --ink-3:  #999;
-      --line:   #e8e8e8;
-      --line-2: #d0d0d0;
-      --bg:     #f5f5f2;
-      --white:  #ffffff;
-      --accent: #1a1a1a;
-      --blue-bg:#eef4fd;
-      --blue:   #2563eb;
-      --radius: 10px;
-    }
+/* Gate */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem}
+.gate-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:100%;max-width:380px;text-align:center}
+.gate-title{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:.4rem}
+.gate-sub{font-size:13px;color:var(--ink-3);margin-bottom:1.5rem}
+.gate-card input{width:100%;font-size:14px;font-family:'DM Sans',sans-serif;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;outline:none;transition:border-color .15s}
+.gate-card input:focus{border-color:var(--accent)}
+.gate-card button{width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif}
+.gate-card button:hover{background:#a84e22}
+.gate-err{font-size:13px;color:#a84e22;margin-top:10px;display:none}
 
-    html, body {
-      min-height: 100%;
-      background: var(--bg);
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      color: var(--ink);
-    }
+/* Dashboard */
+#dashboard{display:none}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 2rem;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-title{font-size:15px;font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.topbar-meta{font-size:12px;color:var(--ink-3);margin-right:4px}
+.tbtn{padding:7px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.tbtn.outline{background:var(--white);border:1px solid var(--border);color:var(--ink-2)}
+.tbtn.outline:hover{border-color:var(--border-strong)}
+.tbtn.solid{background:var(--ink);color:#fff;border:none}
+.tbtn.solid:hover{opacity:.85}
+.tbtn.accent{background:var(--accent);color:#fff;border:none}
+.tbtn.accent:hover{background:#a84e22}
 
-    /* ── Login gate ── */
-    .gate {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-    .gate-card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      text-align: center;
-    }
-    .gate-card h1 {
-      font-size: 20px;
-      font-weight: 500;
-      margin-bottom: 0.4rem;
-    }
-    .gate-card p {
-      font-size: 14px;
-      color: var(--ink-3);
-      margin-bottom: 1.5rem;
-    }
-    .gate-card input {
-      width: 100%;
-      font-size: 15px;
-      padding: 11px 14px;
-      border: 1px solid var(--line-2);
-      border-radius: var(--radius);
-      outline: none;
-      margin-bottom: 10px;
-      transition: border-color 0.15s;
-      font-family: inherit;
-    }
-    .gate-card input:focus { border-color: var(--ink); }
-    .gate-card button {
-      width: 100%;
-      padding: 12px;
-      background: var(--ink);
-      color: var(--white);
-      border: none;
-      border-radius: var(--radius);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.15s;
-    }
-    .gate-card button:hover { opacity: 0.82; }
-    .gate-error {
-      font-size: 13px;
-      color: #c0392b;
-      margin-top: 10px;
-      display: none;
-    }
+.content{max-width:1140px;margin:0 auto;padding:2rem 1.5rem 4rem}
 
-    /* ── Dashboard ── */
-    #dashboard { display: none; }
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:1.75rem}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem}
+.stat-lbl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.stat-val{font-size:26px;font-weight:600;color:var(--ink);line-height:1;margin-bottom:3px}
+.stat-sub{font-size:12px;color:var(--ink-3)}
 
-    .topbar {
-      background: var(--white);
-      border-bottom: 1px solid var(--line);
-      padding: 0 2rem;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .topbar-title {
-      font-size: 15px;
-      font-weight: 500;
-    }
-    .topbar-meta {
-      font-size: 13px;
-      color: var(--ink-3);
-    }
-    .topbar-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-    .btn-refresh {
-      padding: 7px 14px;
-      border: 1px solid var(--line-2);
-      border-radius: 8px;
-      background: var(--white);
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.15s;
-    }
-    .btn-refresh:hover { border-color: var(--ink); }
-    .btn-export {
-      padding: 7px 14px;
-      border: none;
-      border-radius: 8px;
-      background: var(--ink);
-      color: var(--white);
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 0.15s;
-    }
-    .btn-export:hover { opacity: 0.82; }
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.75rem}
+@media(max-width:720px){.chart-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem 1.5rem}
+.chart-head{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:2px}
+.chart-sub{font-size:12px;color:var(--ink-3);margin-bottom:1.25rem}
+.chart-wrap{position:relative;height:190px}
 
-    .content {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
-    }
+/* Inline bar charts */
+.ibar-list{display:flex;flex-direction:column;gap:8px}
+.ibar-row{display:flex;align-items:center;gap:10px}
+.ibar-label{font-size:12px;color:var(--ink-2);flex:0 0 160px;line-height:1.3}
+.ibar-track{flex:1;height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden}
+.ibar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .5s}
+.ibar-count{font-size:12px;color:var(--ink-3);width:28px;text-align:right;flex-shrink:0}
 
-    /* ── Stat cards ── */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      margin-bottom: 2rem;
-    }
-    .stat-card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.5rem;
-    }
-    .stat-label {
-      font-size: 11px;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-bottom: 6px;
-    }
-    .stat-value {
-      font-size: 28px;
-      font-weight: 600;
-      color: var(--ink);
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .stat-sub {
-      font-size: 12px;
-      color: var(--ink-3);
-    }
+/* Table */
+.section-head{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:.75rem}
+.table-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.75rem}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600;text-align:left;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+tbody td{padding:11px 14px;color:var(--ink);vertical-align:top}
+.role-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface-3);color:var(--ink-2)}
+.priority-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-high{background:#fdf0e8;color:#a84e22}
+.badge-med{background:#edf6ee;color:#2d6e35}
+.badge-low{background:#f2f0eb;color:#5a5550}
+.score-pill{display:inline-flex;align-items:center;justify-content:center;width:36px;height:24px;border-radius:4px;font-size:12px;font-weight:600}
+.score-h{background:#fdf0e8;color:#a84e22}
+.score-m{background:#edf6ee;color:#2d6e35}
+.score-l{background:#f2f0eb;color:#5a5550}
+.cell-text{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.ts-cell{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.empty-state,.loading-state{text-align:center;padding:3rem;color:var(--ink-3);font-size:14px}
 
-    /* ── Charts row ── */
-    .chart-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 2rem;
-    }
-    @media (max-width: 700px) {
-      .chart-grid { grid-template-columns: 1fr; }
-    }
-    .chart-card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.5rem 1.5rem;
-    }
-    .chart-heading {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--ink);
-      margin-bottom: 0.25rem;
-    }
-    .chart-sub {
-      font-size: 12px;
-      color: var(--ink-3);
-      margin-bottom: 1.25rem;
-    }
-    .chart-wrap {
-      position: relative;
-      height: 200px;
-    }
+/* AI Analysis */
+.analysis-section{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.75rem}
+.analysis-top{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.analysis-top-left h3{font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink);margin-bottom:2px}
+.analysis-top-left p{font-size:12px;color:var(--ink-3)}
+.analysis-key-row{padding:1rem 1.5rem;background:var(--accent-light);border-bottom:1px solid var(--accent-mid);display:flex;gap:10px;align-items:center}
+.analysis-key-row input{flex:1;font-size:13px;font-family:'DM Sans',sans-serif;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);outline:none;background:#fff}
+.analysis-key-row input:focus{border-color:var(--accent)}
+.analysis-key-note{font-size:11px;color:var(--ink-3);margin-top:4px}
+.analysis-body-wrap{padding:1.5rem}
+.loading-card{display:flex;flex-direction:column;align-items:center;gap:14px;padding:2.5rem}
+.loading-dots{display:flex;gap:8px}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dp 1.4s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.analysis-output{font-size:14px;line-height:1.8;color:var(--ink-2)}
+.analysis-output h2{font-family:'DM Serif Display',serif;font-size:20px;color:var(--ink);margin:2rem 0 .75rem;padding-top:1.5rem;border-top:1px solid var(--border)}
+.analysis-output h2:first-child{margin-top:0;padding-top:0;border-top:none}
+.analysis-output h3{font-size:14px;font-weight:600;color:var(--ink);margin:1.25rem 0 .5rem}
+.analysis-output p{margin-bottom:.9rem}
+.analysis-output ul{margin:.5rem 0 .9rem;padding-left:0;list-style:none}
+.analysis-output ul li{padding:5px 0 5px 20px;position:relative;border-bottom:1px solid var(--surface-3)}
+.analysis-output ul li:last-child{border-bottom:none}
+.analysis-output ul li::before{content:'→';position:absolute;left:0;color:var(--accent);font-weight:600}
+.analysis-output strong{color:var(--ink);font-weight:600}
+.analysis-meta{font-size:12px;color:var(--ink-3);margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
 
-    /* ── Satisfaction bar ── */
-    .sat-bars { display: flex; flex-direction: column; gap: 8px; }
-    .sat-row { display: flex; align-items: center; gap: 10px; }
-    .sat-label {
-      font-size: 13px;
-      color: var(--ink-2);
-      width: 24px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .sat-track {
-      flex: 1;
-      height: 10px;
-      background: var(--line);
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    .sat-fill {
-      height: 100%;
-      background: var(--ink);
-      border-radius: 5px;
-      transition: width 0.6s ease;
-    }
-    .sat-count {
-      font-size: 12px;
-      color: var(--ink-3);
-      width: 28px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    /* ── Challenges bar chart ── */
-    .challenge-bars { display: flex; flex-direction: column; gap: 8px; }
-    .chal-row { display: flex; align-items: center; gap: 10px; }
-    .chal-label {
-      font-size: 12px;
-      color: var(--ink-2);
-      width: 200px;
-      flex-shrink: 0;
-      line-height: 1.3;
-    }
-    .chal-track {
-      flex: 1;
-      height: 8px;
-      background: var(--line);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .chal-fill {
-      height: 100%;
-      background: #555;
-      border-radius: 4px;
-      transition: width 0.6s ease;
-    }
-    .chal-pct {
-      font-size: 12px;
-      color: var(--ink-3);
-      width: 32px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    /* ── Responses table ── */
-    .section-heading {
-      font-size: 15px;
-      font-weight: 500;
-      margin-bottom: 0.75rem;
-    }
-    .table-wrap {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    thead th {
-      padding: 10px 14px;
-      text-align: left;
-      font-size: 11px;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      background: #fafaf8;
-      border-bottom: 1px solid var(--line);
-    }
-    tbody tr { border-bottom: 1px solid var(--line); }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: #fafaf8; }
-    tbody td { padding: 11px 14px; color: var(--ink); vertical-align: top; }
-    .td-name { font-weight: 500; min-width: 100px; }
-    .td-dept {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: var(--bg);
-      font-size: 12px;
-      color: var(--ink-2);
-    }
-    .sat-pill {
-      display: inline-block;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: var(--ink);
-      color: var(--white);
-      font-size: 12px;
-      font-weight: 600;
-      text-align: center;
-      line-height: 26px;
-    }
-    .td-suggestion {
-      max-width: 300px;
-      line-height: 1.5;
-      color: var(--ink-2);
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem;
-      color: var(--ink-3);
-      font-size: 14px;
-    }
-    .loading-state {
-      text-align: center;
-      padding: 3rem;
-      color: var(--ink-3);
-      font-size: 14px;
-    }
-    .ts-cell {
-      font-size: 12px;
-      color: var(--ink-3);
-      white-space: nowrap;
-    }
-
-    /* ── Back link ── */
-    .back-link {
-      display: inline-block;
-      font-size: 13px;
-      color: var(--ink-3);
-      text-decoration: none;
-      margin-top: 1.5rem;
-    }
-    .back-link:hover { color: var(--ink); }
-  </style>
+.back-link{font-size:13px;color:var(--ink-3);text-decoration:none;display:inline-block;margin-top:1rem}
+.back-link:hover{color:var(--ink)}
+</style>
 </head>
 <body>
 
-<!-- ── Login gate ── -->
+<!-- Gate -->
 <div class="gate" id="gate">
   <div class="gate-card">
-    <h1>Admin access</h1>
-    <p>Enter the admin password to view survey results.</p>
-    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()" />
+    <div class="gate-title">Admin access</div>
+    <div class="gate-sub">Enter the admin password to view survey results.</div>
+    <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()">
     <button onclick="checkPw()">View results →</button>
-    <div class="gate-error" id="pw-err">Incorrect password — try again.</div>
+    <div class="gate-err" id="pw-err">Incorrect password — try again.</div>
   </div>
 </div>
 
-<!-- ── Dashboard ── -->
+<!-- Dashboard -->
 <div id="dashboard">
   <div class="topbar">
     <div class="topbar-title">Survey results</div>
     <div class="topbar-actions">
       <span class="topbar-meta" id="last-updated"></span>
-      <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
-      <button class="btn-export" onclick="exportCSV()">Export CSV</button>
+      <button class="tbtn outline" onclick="loadData()">↻ Refresh</button>
+      <button class="tbtn outline" onclick="exportCSV()">↓ CSV</button>
+      <button class="tbtn accent" onclick="scrollToAnalysis()">✦ Analyse with Claude</button>
     </div>
   </div>
 
   <div class="content">
-    <!-- Stat cards -->
+
+    <!-- Stats -->
     <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Total responses</div>
-        <div class="stat-value" id="s-total">—</div>
-        <div class="stat-sub">all time</div>
+      <div class="stat-card"><div class="stat-lbl">Total responses</div><div class="stat-val" id="s-total">—</div><div class="stat-sub">all time</div></div>
+      <div class="stat-card"><div class="stat-lbl">Avg bottleneck score</div><div class="stat-val" id="s-avg">—</div><div class="stat-sub">out of 100</div></div>
+      <div class="stat-card"><div class="stat-lbl">High priority roles</div><div class="stat-val" id="s-high">—</div><div class="stat-sub">score ≥ 70</div></div>
+      <div class="stat-card"><div class="stat-lbl">Undocumented processes</div><div class="stat-val" id="s-undoc">—</div><div class="stat-sub">mostly/fully undocumented</div></div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-head">Responses by role</div>
+        <div class="chart-sub">Distribution of submissions across roles</div>
+        <div class="chart-wrap"><canvas id="roleChart"></canvas></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Avg satisfaction</div>
-        <div class="stat-value" id="s-avg">—</div>
-        <div class="stat-sub">out of 5</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Top department</div>
-        <div class="stat-value" id="s-top-dept" style="font-size:18px;margin-top:4px;">—</div>
-        <div class="stat-sub">most responses</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Suggestions given</div>
-        <div class="stat-value" id="s-suggestions">—</div>
-        <div class="stat-sub">written responses</div>
+      <div class="chart-card">
+        <div class="chart-head">Bottleneck score distribution</div>
+        <div class="chart-sub">How scores are spread across respondents</div>
+        <div class="chart-wrap"><canvas id="scoreChart"></canvas></div>
       </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Charts row 2 -->
     <div class="chart-grid">
-      <!-- Satisfaction distribution -->
       <div class="chart-card">
-        <div class="chart-heading">Satisfaction scores</div>
-        <div class="chart-sub">Distribution across all responses</div>
-        <div id="sat-bars" class="sat-bars"></div>
+        <div class="chart-head">Overhead ratio</div>
+        <div class="chart-sub">Real work vs. administrative overhead</div>
+        <div id="ratioList" class="ibar-list" style="margin-top:.5rem"></div>
       </div>
-
-      <!-- Department breakdown -->
       <div class="chart-card">
-        <div class="chart-heading">Responses by department</div>
-        <div class="chart-sub">Share of total submissions</div>
-        <div class="chart-wrap">
-          <canvas id="dept-chart"></canvas>
+        <div class="chart-head">Error impact level</div>
+        <div class="chart-sub">Consequence when mistakes occur</div>
+        <div id="errList" class="ibar-list" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+
+    <!-- Charts row 3 -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-head">Process documentation</div>
+        <div class="chart-sub">How well are core processes documented?</div>
+        <div id="docList" class="ibar-list" style="margin-top:.5rem"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-head">Workload visibility confidence</div>
+        <div class="chart-sub">Do respondents feel leadership understands their load?</div>
+        <div id="visList" class="ibar-list" style="margin-top:.5rem"></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="section-head">All responses</div>
+    <div class="table-card">
+      <div id="table-body"><div class="loading-state">Loading…</div></div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="analysis-section" id="analysisSection">
+      <div class="analysis-top">
+        <div class="analysis-top-left">
+          <h3>Analyse with Claude</h3>
+          <p>Claude reads every survey response and identifies bottlenecks, patterns, and skill candidates.</p>
+        </div>
+        <button class="tbtn accent" onclick="runAnalysis()" id="analyseBtn">✦ Run analysis</button>
+      </div>
+      <div class="analysis-key-row">
+        <div style="flex:1">
+          <input type="password" id="apiKey" placeholder="Paste your Anthropic API key (sk-ant-…) — never stored, used in-session only">
+          <div class="analysis-key-note">Get your key at console.anthropic.com → API Keys. It is not saved anywhere.</div>
         </div>
       </div>
-    </div>
-
-    <!-- Challenges -->
-    <div class="chart-card" style="margin-bottom: 2rem;">
-      <div class="chart-heading">Top challenges</div>
-      <div class="chart-sub">What respondents selected most</div>
-      <div id="chal-bars" class="challenge-bars" style="margin-top:1rem;"></div>
-    </div>
-
-    <!-- Responses table -->
-    <div class="section-heading">All responses</div>
-    <div class="table-wrap">
-      <div id="table-body">
-        <div class="loading-state">Loading…</div>
-      </div>
+      <div class="analysis-body-wrap" id="analysisBW" style="display:none"></div>
     </div>
 
     <a href="index.html" class="back-link">← Back to survey</a>
@@ -450,175 +224,243 @@
 </div>
 
 <script>
-// ── Auth ────────────────────────────────────────────────────────────────────
-function checkPw() {
-  const val = document.getElementById('pw-input').value;
-  if (val === CONFIG.adminPassword) {
-    document.getElementById('gate').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
+const { createClient } = supabase;
+const db = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+let allRows = [];
+let roleChart = null, scoreChart = null;
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+function checkPw(){
+  if(document.getElementById('pw').value === CONFIG.adminPassword){
+    document.getElementById('gate').style.display='none';
+    document.getElementById('dashboard').style.display='block';
     loadData();
   } else {
-    document.getElementById('pw-err').style.display = 'block';
+    document.getElementById('pw-err').style.display='block';
   }
 }
 
-// ── Supabase ────────────────────────────────────────────────────────────────
-const { createClient } = supabase;
-const db = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
-
-let allRows = [];
-let deptChart = null;
-
-async function loadData() {
-  document.getElementById('table-body').innerHTML = '<div class="loading-state">Loading…</div>';
-
-  const { data, error } = await db
-    .from('survey_responses')
-    .select('*')
-    .order('submitted_at', { ascending: false });
-
-  if (error) {
-    document.getElementById('table-body').innerHTML =
-      `<div class="empty-state" style="color:#c0392b;">Error loading data: ${error.message}</div>`;
-    return;
-  }
-
-  allRows = data || [];
-  document.getElementById('last-updated').textContent =
-    'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+// ── Load ──────────────────────────────────────────────────────────────────
+async function loadData(){
+  document.getElementById('table-body').innerHTML='<div class="loading-state">Loading…</div>';
+  const{data,error}=await db.from('survey_responses').select('*').order('submitted_at',{ascending:false});
+  if(error){ document.getElementById('table-body').innerHTML=`<div class="empty-state" style="color:#a84e22">Error: ${error.message}</div>`; return; }
+  allRows = data||[];
+  document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   renderDashboard(allRows);
 }
 
-// ── Render ──────────────────────────────────────────────────────────────────
-function renderDashboard(rows) {
-  const n = rows.length;
+// ── Render ────────────────────────────────────────────────────────────────
+function renderDashboard(rows){
+  const n=rows.length;
 
-  // Stat cards
-  document.getElementById('s-total').textContent = n;
+  // Stats
+  document.getElementById('s-total').textContent=n;
+  document.getElementById('s-avg').textContent=n?Math.round(rows.reduce((s,r)=>s+(r.score||0),0)/n)+'%':'—';
+  document.getElementById('s-high').textContent=rows.filter(r=>(r.score||0)>=70).length;
+  const undoc=rows.filter(r=>r.doc_level==='Mostly undocumented'||r.doc_level==='No documentation at all').length;
+  document.getElementById('s-undoc').textContent=undoc;
 
-  const avgSat = n
-    ? (rows.reduce((s, r) => s + r.satisfaction, 0) / n).toFixed(1)
-    : '—';
-  document.getElementById('s-avg').textContent = avgSat;
-
-  const deptCounts = {};
-  rows.forEach(r => { deptCounts[r.department] = (deptCounts[r.department] || 0) + 1; });
-  const topDept = n
-    ? Object.entries(deptCounts).sort((a,b) => b[1]-a[1])[0][0]
-    : '—';
-  document.getElementById('s-top-dept').textContent = topDept;
-
-  const suggestions = rows.filter(r => r.suggestion && r.suggestion.trim().length > 0).length;
-  document.getElementById('s-suggestions').textContent = suggestions;
-
-  // Satisfaction bars
-  const satCounts = {1:0,2:0,3:0,4:0,5:0};
-  rows.forEach(r => { satCounts[r.satisfaction]++; });
-  const satMax = Math.max(...Object.values(satCounts), 1);
-  document.getElementById('sat-bars').innerHTML = [5,4,3,2,1].map(v => `
-    <div class="sat-row">
-      <span class="sat-label">${v}</span>
-      <div class="sat-track">
-        <div class="sat-fill" style="width:${Math.round((satCounts[v]/satMax)*100)}%"></div>
-      </div>
-      <span class="sat-count">${satCounts[v]}</span>
-    </div>`).join('');
-
-  // Department doughnut
-  const deptLabels = Object.keys(deptCounts);
-  const deptVals   = deptLabels.map(k => deptCounts[k]);
-  const palette = ['#1a1a1a','#555','#888','#bbb','#ddd','#f0f0f0','#e0e0e0'];
-  if (deptChart) deptChart.destroy();
-  const ctx = document.getElementById('dept-chart').getContext('2d');
-  deptChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: deptLabels,
-      datasets: [{ data: deptVals, backgroundColor: palette.slice(0, deptLabels.length), borderWidth: 0 }],
-    },
-    options: {
-      cutout: '62%',
-      plugins: {
-        legend: { position: 'right', labels: { font: { size: 12 }, color: '#555', boxWidth: 10, padding: 12 } },
-      },
-    },
+  // Role chart
+  const roleCounts={};
+  rows.forEach(r=>{ roleCounts[r.role_name]=(roleCounts[r.role_name]||0)+1; });
+  const roleLabels=Object.keys(roleCounts), roleVals=roleLabels.map(k=>roleCounts[k]);
+  const palette=['#c4602a','#d9845a','#eba380','#e8c4a8','#b07050','#8a5038','#6a3820','#4a2810','#3a1808'];
+  if(roleChart) roleChart.destroy();
+  roleChart=new Chart(document.getElementById('roleChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:roleLabels,datasets:[{data:roleVals,backgroundColor:palette.slice(0,roleLabels.length),borderRadius:4,borderSkipped:false}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#8a8480'},grid:{display:false}},y:{ticks:{stepSize:1,font:{size:11}},grid:{color:'#f0ece4'}}},responsive:true,maintainAspectRatio:false}
   });
 
-  // Challenges
-  const CHALLENGES = [
-    'Too many meetings / not enough focus time',
-    'Unclear priorities or shifting goals',
-    'Lack of tools or resources',
-    'Cross-team communication gaps',
-    'Workload is too high',
-    'Something else',
-  ];
-  const chalCounts = {};
-  rows.forEach(r => { chalCounts[r.challenge] = (chalCounts[r.challenge] || 0) + 1; });
-  const chalMax = Math.max(...Object.values(chalCounts), 1);
-  document.getElementById('chal-bars').innerHTML = CHALLENGES
-    .sort((a,b) => (chalCounts[b]||0) - (chalCounts[a]||0))
-    .map(c => {
-      const cnt = chalCounts[c] || 0;
-      const pct = n ? Math.round((cnt/n)*100) : 0;
-      return `<div class="chal-row">
-        <span class="chal-label">${c}</span>
-        <div class="chal-track">
-          <div class="chal-fill" style="width:${Math.round((cnt/chalMax)*100)}%"></div>
-        </div>
-        <span class="chal-pct">${pct}%</span>
-      </div>`;
-    }).join('');
+  // Score distribution
+  const bands=[0,0,0,0]; // <40, 40-59, 60-79, 80+
+  rows.forEach(r=>{const s=r.score||0; if(s<40)bands[0]++;else if(s<60)bands[1]++;else if(s<80)bands[2]++;else bands[3]++;});
+  if(scoreChart) scoreChart.destroy();
+  scoreChart=new Chart(document.getElementById('scoreChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:['< 40','40–59','60–79','80+'],datasets:[{data:bands,backgroundColor:['#e8c4a8','#eba380','#d9845a','#c4602a'],borderRadius:4,borderSkipped:false}]},
+    options:{plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11},color:'#8a8480'},grid:{display:false}},y:{ticks:{stepSize:1,font:{size:11}},grid:{color:'#f0ece4'}}},responsive:true,maintainAspectRatio:false}
+  });
+
+  // Inline bar lists
+  renderIBars('ratioList',rows,'ratio',['Most is real work','Fairly balanced','More overhead than real work','Mostly overhead'],n);
+  renderIBars('errList',rows,'err_impact',['Minor — easily fixed with no real consequence','Moderate — causes rework, delays, or client frustration','Significant — financial, contractual, or reputational impact','Varies — depends on the task and who catches it'],n);
+  renderIBars('docList',rows,'doc_level',['Well documented','Partially documented','Mostly undocumented','No documentation at all'],n);
+  renderIBars('visList',rows,'visibility',['Very confident','Somewhat confident','Not very confident','Not at all confident'],n);
 
   // Table
-  if (rows.length === 0) {
-    document.getElementById('table-body').innerHTML =
-      '<div class="empty-state">No responses yet — share the survey link with your team!</div>';
+  if(!rows.length){
+    document.getElementById('table-body').innerHTML='<div class="empty-state">No responses yet — share the survey link with your team!</div>';
     return;
   }
-
-  const thead = `<thead><tr>
-    <th>Name</th>
-    <th>Department</th>
-    <th>Satisfaction</th>
-    <th>Challenge</th>
-    <th>Suggestion</th>
-    <th>Submitted</th>
+  const thead=`<thead><tr>
+    <th>Name</th><th>Role</th><th>Score</th><th>Priority</th>
+    <th>Overhead</th><th>Errors</th><th>Documentation</th>
+    <th>Biggest time drain</th><th>Wish: eliminate</th><th>Submitted</th>
   </tr></thead>`;
-
-  const tbody = '<tbody>' + rows.map(r => {
-    const ts = new Date(r.submitted_at).toLocaleDateString('en-AU', {
-      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-    });
+  const tbody='<tbody>'+rows.map(r=>{
+    const sc=r.score||0;
+    const scls=sc>=70?'score-h':sc>=40?'score-m':'score-l';
+    const {label,cls}=getPriority(sc);
+    const ts=new Date(r.submitted_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     return `<tr>
-      <td class="td-name">${r.name || '<span style="color:#bbb">anonymous</span>'}</td>
-      <td><span class="td-dept">${r.department}</span></td>
-      <td><span class="sat-pill">${r.satisfaction}</span></td>
-      <td style="font-size:12px;color:#555;max-width:180px;line-height:1.4;">${r.challenge}</td>
-      <td class="td-suggestion">${r.suggestion || '<span style="color:#ccc">—</span>'}</td>
+      <td style="font-weight:500;min-width:90px">${r.name||'<span style="color:#bbb">anon</span>'}</td>
+      <td><span class="role-pill">${r.role_name}</span></td>
+      <td><span class="score-pill ${scls}">${sc}%</span></td>
+      <td><span class="priority-badge ${cls}">${label}</span></td>
+      <td style="font-size:12px;color:#8a8480;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.ratio||'—'}</td>
+      <td style="font-size:12px;color:#8a8480;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.err_impact||'—'}</td>
+      <td style="font-size:12px;color:#8a8480;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.doc_level||'—'}</td>
+      <td class="cell-text">${r.time1||'—'}</td>
+      <td class="cell-text">${r.wish1||'—'}</td>
       <td class="ts-cell">${ts}</td>
     </tr>`;
-  }).join('') + '</tbody>';
-
-  document.getElementById('table-body').innerHTML = `<table>${thead}${tbody}</table>`;
+  }).join('')+'</tbody>';
+  document.getElementById('table-body').innerHTML=`<table>${thead}${tbody}</table>`;
 }
 
-// ── CSV export ──────────────────────────────────────────────────────────────
-function exportCSV() {
-  if (!allRows.length) { alert('No data to export yet.'); return; }
-  const headers = ['id','submitted_at','name','department','satisfaction','challenge','suggestion'];
-  const csvRows = [
-    headers.join(','),
-    ...allRows.map(r => headers.map(h => {
-      const v = r[h] ?? '';
-      return `"${String(v).replace(/"/g, '""')}"`;
-    }).join(','))
-  ];
-  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `survey-results-${new Date().toISOString().slice(0,10)}.csv`;
+function renderIBars(elId,rows,field,keys,total){
+  const counts={};
+  rows.forEach(r=>{ if(r[field]) counts[r[field]]=(counts[r[field]]||0)+1; });
+  const max=Math.max(...keys.map(k=>counts[k]||0),1);
+  document.getElementById(elId).innerHTML=keys.map(k=>{
+    const c=counts[k]||0;
+    const label=k.length>28?k.substring(0,26)+'…':k;
+    return `<div class="ibar-row">
+      <span class="ibar-label" title="${k}">${label}</span>
+      <div class="ibar-track"><div class="ibar-fill" style="width:${Math.round((c/max)*100)}%"></div></div>
+      <span class="ibar-count">${c}</span>
+    </div>`;
+  }).join('');
+}
+
+function getPriority(s){
+  if(s>=70)return{label:'High',cls:'badge-high'};
+  if(s>=40)return{label:'Medium',cls:'badge-med'};
+  return{label:'Lower',cls:'badge-low'};
+}
+
+// ── CSV Export ────────────────────────────────────────────────────────────
+function exportCSV(){
+  if(!allRows.length){ alert('No data to export yet.'); return; }
+  const headers=['id','submitted_at','name','role','role_name','score','ratio','err_impact','doc_level','visibility','time1','time2','rep1','err1','rep2','know1','know2','sys1','wish1','wish2','extra'];
+  const csvRows=[headers.map(h=>`"${h}"`).join(','),...allRows.map(r=>
+    headers.map(h=>{const v=h==='role_answers'?JSON.stringify(r[h]||{}):r[h]??'';return `"${String(v).replace(/"/g,'""')}"`;}).join(',')
+  )];
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csvRows.join('\n'));
+  a.download=`survey-results-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
+}
+
+// ── AI Analysis ───────────────────────────────────────────────────────────
+function scrollToAnalysis(){ document.getElementById('analysisSection').scrollIntoView({behavior:'smooth'}); }
+
+async function runAnalysis(){
+  const key=document.getElementById('apiKey').value.trim();
+  if(!key){ alert('Please paste your Anthropic API key in the field above the button.'); return; }
+  if(!allRows.length){ alert('No submissions yet — ask the team to complete the survey first.'); return; }
+
+  const bw=document.getElementById('analysisBW');
+  bw.style.display='block';
+  bw.innerHTML=`<div class="loading-card"><div class="loading-dots"><span></span><span></span><span></span></div><div style="font-size:14px;color:#8a8480;text-align:center">Reading all survey responses and generating analysis…</div></div>`;
+
+  const prompt=buildPrompt();
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        system:`You are a business improvement analyst specialising in operational efficiency, process automation, and AI skill design. You have been given the results of an internal team survey about bottlenecks, repetitive work, and knowledge concentration. Your job is to analyse the responses and produce a clear, actionable report.
+
+Format your output using this exact structure (use ## for h2 and ### for h3):
+
+## Executive summary
+A 3–4 sentence overview of the most significant findings across the team.
+
+## Top 5 bottlenecks
+The five highest-impact bottlenecks or time drains identified. For each, name the issue, which roles it affects, and why it matters.
+
+## Cross-role patterns
+Themes that appear across multiple roles — shared frustrations, systemic issues, information flow problems.
+
+## Knowledge concentration risks
+Where critical knowledge sits with one or two people. Highlight the business risk.
+
+## Recommended Claude skill candidates
+For each candidate write: **Skill name** — one sentence on what it does and who it helps.
+Estimated impact: [High/Medium/Low]. Roles affected: [list].
+Aim for 5–8 specific, realistic candidates based directly on what the team said.
+
+## Suggested quick wins
+3–5 process improvements that could be made without building a skill.
+
+Be specific. Quote or closely paraphrase actual responses where relevant. Do not be generic. Write in plain, direct language.`,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    if(data.error){ bw.innerHTML=`<div style="color:#a84e22;padding:1rem;font-size:14px">API error: ${data.error.message}</div>`; return; }
+    const text=data.content&&data.content[0]?data.content[0].text:'No response received.';
+    const meta=`<div class="analysis-meta">Based on ${allRows.length} submission${allRows.length!==1?'s':''} from ${[...new Set(allRows.map(r=>r.role_name))].join(', ')}. Generated ${new Date().toLocaleString()}.</div>`;
+    bw.innerHTML=`<div class="analysis-output">${meta}${mdToHtml(text)}</div>
+      <div style="display:flex;gap:10px;margin-top:1.5rem">
+        <button class="tbtn outline" onclick="runAnalysis()">↺ Re-run</button>
+        <button class="tbtn outline" onclick="copyAnalysis()">⎘ Copy report</button>
+      </div>`;
+  } catch(err){
+    bw.innerHTML=`<div style="color:#a84e22;padding:1rem;font-size:14px">Request failed: ${err.message}</div>`;
+  }
+}
+
+function buildPrompt(){
+  const lines=[`SURVEY RESULTS — ${allRows.length} submission(s)\n`];
+  allRows.forEach((r,i)=>{
+    lines.push(`--- SUBMISSION ${i+1}: ${r.name||'Anonymous'} (${r.role_name}) | Score: ${r.score||0}% ---`);
+    if(r.ratio) lines.push(`Overhead ratio: ${r.ratio}`);
+    if(r.err_impact) lines.push(`Error impact: ${r.err_impact}`);
+    if(r.doc_level) lines.push(`Documentation level: ${r.doc_level}`);
+    if(r.visibility) lines.push(`Workload visibility: ${r.visibility}`);
+    if(r.time1) lines.push(`Biggest time drain: "${r.time1}"`);
+    if(r.time2) lines.push(`Interruptions/flow breakers: "${r.time2}"`);
+    if(r.rep1) lines.push(`Most repetitive task: "${r.rep1}"`);
+    if(r.err1) lines.push(`Where errors happen: "${r.err1}"`);
+    if(r.rep2) lines.push(`Undocumented workarounds: "${r.rep2}"`);
+    if(r.know1) lines.push(`What only they can do: "${r.know1}"`);
+    if(r.know2) lines.push(`What colleagues always ask: "${r.know2}"`);
+    if(r.sys1) lines.push(`System/tool frustrations: "${r.sys1}"`);
+    if(r.wish1) lines.push(`Task they'd eliminate: "${r.wish1}"`);
+    if(r.wish2) lines.push(`What would give them an hour back: "${r.wish2}"`);
+    if(r.extra) lines.push(`Additional notes: "${r.extra}"`);
+    if(r.role_answers){
+      Object.entries(r.role_answers).forEach(([k,v])=>{ if(v) lines.push(`[Role-specific ${k}]: "${v}"`); });
+    }
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+function mdToHtml(md){
+  return md
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,m=>'<ul>'+m+'</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/^(?!<[hup])(.*\S.*)$/gm,'<p>$1</p>')
+    .replace(/<p><\/p>/g,'')
+    .replace(/<p>(<[hul])/g,'$1')
+    .replace(/(<\/[hul][^>]*>)<\/p>/g,'$1');
+}
+
+function copyAnalysis(){
+  const el=document.getElementById('analysisBW');
+  if(el) navigator.clipboard.writeText(el.innerText).then(()=>{ const b=event.target; b.textContent='✓ Copied'; setTimeout(()=>b.textContent='⎘ Copy report',2000); });
 }
 </script>
 </body>

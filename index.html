@@ -1,524 +1,427 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Team Pulse Survey</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --ink:    #1a1a1a;
-      --ink-2:  #555;
-      --ink-3:  #999;
-      --line:   #e8e8e8;
-      --line-2: #d0d0d0;
-      --bg:     #fafaf8;
-      --white:  #ffffff;
-      --accent: #1a1a1a;
-      --green:  #1a7a4a;
-      --green-bg: #edf7f1;
-      --radius: 10px;
-    }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      font-family: 'Georgia', serif;
-      color: var(--ink);
-    }
-
-    .shell {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
-    }
-
-    .card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 2.5rem 2.5rem 2rem;
-      width: 100%;
-      max-width: 540px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-    /* ── Header ── */
-    .survey-header {
-      margin-bottom: 2rem;
-    }
-    .survey-tag {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 11px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-bottom: 0.6rem;
-    }
-    .survey-title {
-      font-size: 22px;
-      font-weight: normal;
-      line-height: 1.3;
-      margin-bottom: 0.4rem;
-    }
-    .survey-desc {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 14px;
-      color: var(--ink-2);
-      line-height: 1.6;
-    }
-
-    /* ── Progress ── */
-    .progress-wrap {
-      margin-bottom: 2rem;
-    }
-    .progress-meta {
-      display: flex;
-      justify-content: space-between;
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 12px;
-      color: var(--ink-3);
-      margin-bottom: 8px;
-    }
-    .progress-track {
-      height: 2px;
-      background: var(--line);
-      border-radius: 1px;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--ink);
-      border-radius: 1px;
-      transition: width 0.35s ease;
-    }
-
-    /* ── Questions ── */
-    .q-label {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ink-3);
-      margin-bottom: 0.5rem;
-    }
-    .q-text {
-      font-size: 18px;
-      font-weight: normal;
-      line-height: 1.45;
-      margin-bottom: 0.35rem;
-      color: var(--ink);
-    }
-    .q-hint {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 13px;
-      color: var(--ink-3);
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
-    }
-
-    /* ── Text Input ── */
-    input[type="text"], textarea, select {
-      width: 100%;
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 15px;
-      padding: 11px 14px;
-      border: 1px solid var(--line-2);
-      border-radius: var(--radius);
-      background: var(--white);
-      color: var(--ink);
-      outline: none;
-      transition: border-color 0.15s;
-      appearance: none;
-    }
-    input[type="text"]:focus, textarea:focus, select:focus {
-      border-color: var(--ink);
-    }
-    textarea {
-      min-height: 90px;
-      resize: vertical;
-      line-height: 1.6;
-    }
-    select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23999' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 36px;
-      cursor: pointer;
-    }
-
-    /* ── Scale ── */
-    .scale-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .scale-btn {
-      flex: 1;
-      padding: 12px 4px;
-      border: 1px solid var(--line-2);
-      border-radius: var(--radius);
-      background: var(--white);
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--ink-2);
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.15s;
-    }
-    .scale-btn:hover { border-color: var(--ink); color: var(--ink); }
-    .scale-btn.on {
-      background: var(--ink);
-      border-color: var(--ink);
-      color: var(--white);
-    }
-    .scale-ends {
-      display: flex;
-      justify-content: space-between;
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 11px;
-      color: var(--ink-3);
-      margin-bottom: 1.5rem;
-    }
-
-    /* ── Option Buttons ── */
-    .option-btn {
-      display: block;
-      width: 100%;
-      text-align: left;
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 14px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      border: 1px solid var(--line-2);
-      border-radius: var(--radius);
-      background: var(--white);
-      color: var(--ink);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .option-btn:hover { border-color: var(--ink); }
-    .option-btn.on {
-      border-color: var(--ink);
-      background: var(--ink);
-      color: var(--white);
-      font-weight: 500;
-    }
-
-    /* ── Nav ── */
-    .nav-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 2rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--line);
-    }
-    .btn-next {
-      flex: 1;
-      padding: 12px 20px;
-      background: var(--ink);
-      color: var(--white);
-      border: none;
-      border-radius: var(--radius);
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-    .btn-next:hover { opacity: 0.82; }
-    .btn-next:disabled { opacity: 0.35; cursor: default; }
-    .btn-back {
-      padding: 12px 16px;
-      background: transparent;
-      color: var(--ink-2);
-      border: 1px solid var(--line-2);
-      border-radius: var(--radius);
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn-back:hover { border-color: var(--ink); color: var(--ink); }
-
-    /* ── Thank you ── */
-    .thankyou {
-      text-align: center;
-      padding: 1rem 0;
-    }
-    .thankyou-icon {
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: var(--green-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.25rem;
-      font-size: 24px;
-    }
-    .thankyou h2 {
-      font-size: 22px;
-      font-weight: normal;
-      margin-bottom: 0.5rem;
-    }
-    .thankyou p {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 14px;
-      color: var(--ink-2);
-      line-height: 1.6;
-      max-width: 340px;
-      margin: 0 auto;
-    }
-
-    /* ── Error ── */
-    .error-msg {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 13px;
-      color: #c0392b;
-      margin-top: 0.75rem;
-      display: none;
-    }
-
-    /* ── Footer ── */
-    .footer {
-      font-family: 'Helvetica Neue', sans-serif;
-      font-size: 12px;
-      color: var(--ink-3);
-      margin-top: 1.5rem;
-      text-align: center;
-    }
-    .footer a { color: var(--ink-3); }
-
-    @media (max-width: 540px) {
-      .card { padding: 1.75rem 1.25rem 1.5rem; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Workflow Survey</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#1a1714;--ink-2:#4a4540;--ink-3:#8a8480;--surface:#faf9f6;--surface-2:#f2f0eb;--surface-3:#e8e4dc;--accent:#c4602a;--accent-light:#fdf0e8;--accent-mid:#f0c4a0;--border:#dcd8d0;--border-strong:#c8c2b8;--radius:6px;--radius-lg:10px}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;font-size:15px;line-height:1.6}
+.page{max-width:680px;margin:0 auto;padding:3rem 2rem 6rem}
+.survey-header{margin-bottom:3rem;border-bottom:1px solid var(--border);padding-bottom:2rem}
+.survey-eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:10px}
+.survey-title{font-family:'DM Serif Display',serif;font-size:36px;line-height:1.15;color:var(--ink);margin-bottom:12px}
+.survey-subtitle{font-size:14px;color:var(--ink-2);line-height:1.7;max-width:520px}
+.progress-wrap{margin-bottom:2.5rem}
+.progress-steps{display:flex;gap:6px;margin-bottom:8px}
+.progress-step{height:3px;flex:1;background:var(--surface-3);border-radius:2px;transition:background .3s}
+.progress-step.done{background:var(--accent)}
+.progress-step.active{background:var(--accent-mid)}
+.progress-meta{font-size:12px;color:var(--ink-3)}
+.progress-meta strong{color:var(--ink-2);font-weight:500}
+.section-eyebrow{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px}
+.section-eyebrow::after{content:'';flex:1;height:1px;background:var(--border)}
+.section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--ink);margin-bottom:6px;line-height:1.25}
+.section-intro{font-size:14px;color:var(--ink-2);margin-bottom:2rem;line-height:1.7;padding:12px 16px;background:var(--accent-light);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0}
+.field{margin-bottom:1.75rem}
+.field-label{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;display:flex;align-items:flex-start;gap:6px}
+.q-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;min-width:20px;background:var(--surface-3);border-radius:50%;font-size:11px;font-weight:600;color:var(--ink-3);margin-top:1px}
+.field-hint{font-size:12px;color:var(--ink-3);margin-bottom:8px;margin-left:26px;line-height:1.5}
+.field textarea,.field input{width:100%;padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--ink);transition:border-color .15s,box-shadow .15s;line-height:1.6}
+.field textarea:focus,.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(196,96,42,.08)}
+.field textarea{resize:vertical;min-height:88px}
+.radio-grid{display:grid;gap:8px}
+.radio-grid.cols-2{grid-template-columns:1fr 1fr}
+.radio-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s;background:#fff}
+.radio-card:hover{border-color:var(--border-strong);background:var(--surface-2)}
+.radio-card.selected{border-color:var(--accent);background:var(--accent-light)}
+.radio-card input[type=radio]{display:none}
+.radio-dot{width:16px;height:16px;min-width:16px;border-radius:50%;border:1.5px solid var(--border-strong);display:flex;align-items:center;justify-content:center;margin-top:2px;transition:all .15s}
+.radio-card.selected .radio-dot{border-color:var(--accent);background:var(--accent)}
+.radio-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff;display:none}
+.radio-card.selected .radio-dot::after{display:block}
+.radio-text{flex:1}
+.radio-main{font-size:14px;color:var(--ink);font-weight:500;line-height:1.4}
+.radio-sub{font-size:12px;color:var(--ink-3);margin-top:2px;line-height:1.4}
+.role-intro{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:2rem;display:flex;gap:14px;align-items:flex-start}
+.role-icon{font-size:24px;line-height:1}
+.role-intro-name{font-weight:600;font-size:15px;color:var(--ink);margin-bottom:2px}
+.role-intro-sub{font-size:13px;color:var(--ink-3);line-height:1.5}
+.btn-row{display:flex;gap:10px;margin-top:2.5rem;align-items:center}
+.btn{padding:10px 22px;font-size:14px;font-weight:500;border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;border:1px solid var(--border)}
+.btn.secondary{background:#fff;color:var(--ink-2)}
+.btn.secondary:hover{background:var(--surface-2);border-color:var(--border-strong)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:#a84e22}
+.score-hero{display:flex;align-items:center;gap:1.5rem;padding:1.5rem;background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:1.5rem}
+.score-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;flex-shrink:0}
+.score-high{background:#fdf0e8;color:#a84e22}
+.score-mid{background:#edf6ee;color:#2d6e35}
+.score-low{background:#f2f0eb;color:#4a4540}
+.score-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--ink);margin-bottom:4px}
+.score-desc{font-size:13px;color:var(--ink-2);line-height:1.6}
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.5rem}
+.dim-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.dim-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600;margin-bottom:4px}
+.dim-value{font-size:13px;color:var(--ink);font-weight:500}
+.dim-bar{height:3px;background:var(--surface-3);border-radius:2px;margin-top:6px}
+.dim-bar-fill{height:100%;border-radius:2px;background:var(--accent);transition:width .5s}
+.priority-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-high{background:#fdf0e8;color:#a84e22}
+.badge-med{background:#edf6ee;color:#2d6e35}
+.badge-low{background:#f2f0eb;color:#5a5550}
+.loading-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:3rem 2rem;display:flex;flex-direction:column;align-items:center;gap:16px;background:#fff;margin-top:4rem}
+.loading-text{font-size:14px;color:var(--ink-3);text-align:center}
+.loading-dots{display:flex;gap:8px}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dp 1.4s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:.2s}
+.loading-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dp{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.footer-note{font-size:12px;color:var(--ink-3);margin-top:2.5rem;text-align:center}
+.footer-note a{color:var(--ink-3)}
+@media(max-width:520px){.radio-grid.cols-2{grid-template-columns:1fr}.dim-grid{grid-template-columns:1fr}.page{padding:2rem 1.25rem 5rem}.survey-title{font-size:28px}}
+</style>
 </head>
 <body>
-<div class="shell">
-  <div class="card" id="card">
-    <!-- injected by JS -->
+<div class="page">
+
+<div id="formSection">
+  <div class="survey-header">
+    <div class="survey-eyebrow">Operational Review 2025</div>
+    <h1 class="survey-title">Where does your day actually go?</h1>
+    <p class="survey-subtitle">Help us identify the tasks that slow the business down — the repetitive work, the bottlenecks, the things only you know how to do. Your answers will guide how we use automation and AI tools to give you time back.</p>
   </div>
-  <div class="footer">
-    Responses stored securely · <a href="admin.html">Admin</a>
+  <div class="progress-wrap">
+    <div class="progress-steps">
+      <div class="progress-step active" id="ps1"></div><div class="progress-step" id="ps2"></div><div class="progress-step" id="ps3"></div><div class="progress-step" id="ps4"></div><div class="progress-step" id="ps5"></div><div class="progress-step" id="ps6"></div>
+    </div>
+    <div class="progress-meta">Step <strong id="stepNum">1</strong> of <strong>6</strong> — <span id="stepName">About you</span></div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="step" id="step1">
+    <div class="section-eyebrow">Step 1</div>
+    <h2 class="section-title">Let's start with you</h2>
+    <p class="section-intro">Select your role so we can ask questions that are relevant to your day-to-day. All responses are anonymous to leadership.</p>
+    <div class="field">
+      <div class="field-label">Your name <span style="color:var(--ink-3);font-weight:400">(optional)</span></div>
+      <input type="text" id="f_name" placeholder="First name, or leave blank">
+    </div>
+    <div class="field">
+      <div class="field-label">Your role</div>
+      <div class="field-hint">Select the one that best matches your position.</div>
+      <div class="radio-grid" id="roleGrid">
+        <label class="radio-card" onclick="pickRole(this,'service_coordinator')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Service Coordinator</div><div class="radio-sub">Scheduling, dispatch, job management</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'service_manager')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Service Manager</div><div class="radio-sub">Team oversight, escalations, performance</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'administrator')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Administrator</div><div class="radio-sub">General admin, data entry, records</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'business_administrator')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Business Administrator</div><div class="radio-sub">Cross-department processes, compliance</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'account_manager')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Account Manager</div><div class="radio-sub">Client relationships, quotes, CRM</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'project_manager')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Project Manager</div><div class="radio-sub">Delivery, reporting, subcontractors</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'director')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Director</div><div class="radio-sub">Strategy, approvals, business visibility</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'estimator')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Estimator</div><div class="radio-sub">Quoting, pricing, scope analysis</div></div></label>
+        <label class="radio-card" onclick="pickRole(this,'accounts_admin')"><input type="radio" name="role"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Accounts Admin / Financial Controller</div><div class="radio-sub">Invoicing, reconciliation, reporting</div></div></label>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn primary" onclick="goTo(2)">Start survey →</button></div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="step2" style="display:none">
+    <div id="roleIntro2"></div>
+    <div class="section-eyebrow">Step 2</div>
+    <h2 class="section-title">Where does your time go?</h2>
+    <p class="section-intro">These questions help us understand the biggest time drains in your role — the tasks that feel like they eat your day before you've had a chance to do the work that actually matters.</p>
+    <div class="field">
+      <div class="field-label"><span class="q-num">1</span>On a typical day, what single activity consumes the most time?</div>
+      <div class="field-hint">Think about what you start doing and suddenly realise an hour has passed.</div>
+      <textarea id="f_time1" placeholder="e.g. Chasing job status updates from technicians in the field so I can update clients…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">2</span>What tasks regularly interrupt your focus and break your flow?</div>
+      <div class="field-hint">What pulls you away from what you were doing — phone calls, requests, system issues?</div>
+      <textarea id="f_time2" placeholder="e.g. Being asked the same questions repeatedly because information isn't centralised…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">3</span>Roughly how much of your day feels like "real work" vs. administrative overhead?</div>
+      <div class="radio-grid cols-2">
+        <label class="radio-card" onclick="pick(this,'ratio')"><input type="radio" name="ratio"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Most is real work</div><div class="radio-sub">~80%+ value-adding</div></div></label>
+        <label class="radio-card" onclick="pick(this,'ratio')"><input type="radio" name="ratio"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Fairly balanced</div><div class="radio-sub">~60% value-adding</div></div></label>
+        <label class="radio-card" onclick="pick(this,'ratio')"><input type="radio" name="ratio"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">More overhead than real work</div><div class="radio-sub">~40% value-adding</div></div></label>
+        <label class="radio-card" onclick="pick(this,'ratio')"><input type="radio" name="ratio"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Mostly overhead</div><div class="radio-sub">Under 30% value-adding</div></div></label>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn secondary" onclick="goTo(1)">← Back</button><button class="btn primary" onclick="goTo(3)">Next →</button></div>
+  </div>
+
+  <!-- Step 3: Role-specific -->
+  <div class="step" id="step3" style="display:none">
+    <div class="section-eyebrow">Step 3</div>
+    <h2 class="section-title">Your role, in depth</h2>
+    <p class="section-intro" id="step3Intro">The following questions are tailored specifically to your role.</p>
+    <div id="roleQuestions"></div>
+    <div class="btn-row"><button class="btn secondary" onclick="goTo(2)">← Back</button><button class="btn primary" onclick="goTo(4)">Next →</button></div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="step4" style="display:none">
+    <div class="section-eyebrow">Step 4</div>
+    <h2 class="section-title">Repetition and errors</h2>
+    <p class="section-intro">Repetitive tasks and error-prone processes are prime candidates for automation. Be honest — this is exactly what we need to hear.</p>
+    <div class="field">
+      <div class="field-label"><span class="q-num">1</span>What task do you repeat most often that follows almost exactly the same steps each time?</div>
+      <div class="field-hint">Even small tasks count — if you do it daily, it adds up.</div>
+      <textarea id="f_rep1" placeholder="e.g. Every morning I copy data from one system into a spreadsheet before the team meeting…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">2</span>Where do mistakes most commonly happen in your work, and what causes them?</div>
+      <div class="field-hint">Think about errors you've made or seen — missed steps, wrong data, miscommunication.</div>
+      <textarea id="f_err1" placeholder="e.g. Forgetting to update the job status after a technician finishes, causing billing delays…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">3</span>When errors happen, what's the typical impact?</div>
+      <div class="radio-grid">
+        <label class="radio-card" onclick="pick(this,'err_impact')"><input type="radio" name="err_impact"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Minor — easily fixed with no real consequence</div></div></label>
+        <label class="radio-card" onclick="pick(this,'err_impact')"><input type="radio" name="err_impact"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Moderate — causes rework, delays, or client frustration</div></div></label>
+        <label class="radio-card" onclick="pick(this,'err_impact')"><input type="radio" name="err_impact"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Significant — financial, contractual, or reputational impact</div></div></label>
+        <label class="radio-card" onclick="pick(this,'err_impact')"><input type="radio" name="err_impact"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Varies — depends on the task and who catches it</div></div></label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">4</span>Tasks you do differently from how you were originally taught? <span style="font-weight:400;color:var(--ink-3)">(optional)</span></div>
+      <div class="field-hint">This often reveals undocumented improvements that should be formalised.</div>
+      <textarea id="f_rep2" placeholder="e.g. I use a personal tracking spreadsheet because the system doesn't give me the view I need…" style="min-height:70px"></textarea>
+    </div>
+    <div class="btn-row"><button class="btn secondary" onclick="goTo(3)">← Back</button><button class="btn primary" onclick="goTo(5)">Next →</button></div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="step" id="step5" style="display:none">
+    <div class="section-eyebrow">Step 5</div>
+    <h2 class="section-title">Knowledge and systems</h2>
+    <p class="section-intro">We want to understand where knowledge is locked inside people's heads rather than documented — and where the tools we use create friction rather than remove it.</p>
+    <div class="field">
+      <div class="field-label"><span class="q-num">1</span>What's the one thing that would be very hard for someone else to cover if you were absent?</div>
+      <div class="field-hint">What would fall over without you — because only you know how to do it?</div>
+      <textarea id="f_know1" placeholder="e.g. I'm the only one who knows how to reconcile the WIP report because I built the formula logic…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">2</span>What do new team members or others in the business ask you most often?</div>
+      <div class="field-hint">Frequently-asked questions usually mean there's undocumented knowledge or unclear processes.</div>
+      <textarea id="f_know2" placeholder="e.g. Where to find the correct rate sheets, how to process a variation, how to format a PO…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">3</span>Which systems or tools cause the most frustration in your day?</div>
+      <div class="field-hint">Name the tools and describe the pain — too many steps, poor visibility, duplicate entry, etc.</div>
+      <textarea id="f_sys1" placeholder="e.g. Monday.com doesn't connect to Xero so I have to enter billing information in two places…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">4</span>How documented are your core processes?</div>
+      <div class="radio-grid">
+        <label class="radio-card" onclick="pick(this,'doc_level')"><input type="radio" name="doc_level"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Well documented</div><div class="radio-sub">Step-by-step guides exist and are kept up to date</div></div></label>
+        <label class="radio-card" onclick="pick(this,'doc_level')"><input type="radio" name="doc_level"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Partially documented</div><div class="radio-sub">Some notes exist but have gaps or are outdated</div></div></label>
+        <label class="radio-card" onclick="pick(this,'doc_level')"><input type="radio" name="doc_level"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Mostly undocumented</div><div class="radio-sub">Mostly in my head or learned by doing</div></div></label>
+        <label class="radio-card" onclick="pick(this,'doc_level')"><input type="radio" name="doc_level"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">No documentation at all</div><div class="radio-sub">Nothing formal exists</div></div></label>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn secondary" onclick="goTo(4)">← Back</button><button class="btn primary" onclick="goTo(6)">Next →</button></div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="step" id="step6" style="display:none">
+    <div class="section-eyebrow">Step 6 — Final step</div>
+    <h2 class="section-title">If you had a magic wand…</h2>
+    <p class="section-intro">This is the most valuable part of the survey. Tell us what you actually want — no filter needed.</p>
+    <div class="field">
+      <div class="field-label"><span class="q-num">1</span>If you could eliminate one task from your week entirely, what would it be and why?</div>
+      <textarea id="f_wish1" placeholder="e.g. Manually copying job completion data into the billing spreadsheet — it takes 45 minutes every Monday…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">2</span>What would need to be true for you to get an hour back each day?</div>
+      <div class="field-hint">Think about what change — to a process, tool, or information flow — would free up the most time.</div>
+      <textarea id="f_wish2" placeholder="e.g. If clients could self-serve basic job status updates, I'd stop being a human status board…"></textarea>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">3</span>Overall, how confident are you that the business has good visibility of your workload?</div>
+      <div class="radio-grid cols-2">
+        <label class="radio-card" onclick="pick(this,'visibility')"><input type="radio" name="visibility"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Very confident</div><div class="radio-sub">My workload is well understood</div></div></label>
+        <label class="radio-card" onclick="pick(this,'visibility')"><input type="radio" name="visibility"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Somewhat confident</div><div class="radio-sub">Broadly understood, some gaps</div></div></label>
+        <label class="radio-card" onclick="pick(this,'visibility')"><input type="radio" name="visibility"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Not very confident</div><div class="radio-sub">My role is underestimated</div></div></label>
+        <label class="radio-card" onclick="pick(this,'visibility')"><input type="radio" name="visibility"><div class="radio-dot"></div><div class="radio-text"><div class="radio-main">Not at all confident</div><div class="radio-sub">Leadership has little visibility</div></div></label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="q-num">4</span>Anything else you want to flag? <span style="font-weight:400;color:var(--ink-3)">(optional)</span></div>
+      <div class="field-hint">Seasonal pressures, workarounds you rely on, processes that used to work but don't anymore.</div>
+      <textarea id="f_extra" placeholder="Optional — anything else the business should know…" style="min-height:70px"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn secondary" onclick="goTo(5)">← Back</button>
+      <button class="btn primary" onclick="submitSurvey()">Submit my responses →</button>
+    </div>
   </div>
 </div>
 
+<div id="loadingSection" style="display:none">
+  <div class="loading-card">
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+    <div class="loading-text">Saving your response…</div>
+  </div>
+</div>
+
+<div id="resultSection" style="display:none">
+  <div class="survey-header" style="margin-bottom:2rem">
+    <div class="survey-eyebrow">Submission received</div>
+    <h1 class="survey-title">Thanks for your input.</h1>
+    <p class="survey-subtitle">Here's a summary of how your role's workload scores as a bottleneck candidate. Your responses have been saved.</p>
+  </div>
+  <div id="resultContent"></div>
+  <div class="btn-row" style="margin-top:1.5rem">
+    <button class="btn secondary" onclick="startNew()">Submit another response →</button>
+  </div>
+</div>
+
+<div class="footer-note">Responses stored securely · <a href="admin.html">Admin access</a></div>
+
+</div>
 <script>
 const { createClient } = supabase;
 const db = createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
 
-// ── Survey definition ──────────────────────────────────────────
-const QUESTIONS = [
-  {
-    id: 'name',
-    type: 'text',
-    text: 'What\'s your name?',
-    hint: 'First name is fine — this helps us follow up if needed.',
-    placeholder: 'e.g. Alex',
-    optional: true,
-  },
-  {
-    id: 'department',
-    type: 'select',
-    text: 'Which team or department are you in?',
-    hint: '',
-    options: ['Engineering', 'Design', 'Product', 'Marketing', 'Operations', 'Finance', 'Other'],
-  },
-  {
-    id: 'satisfaction',
-    type: 'scale',
-    text: 'How satisfied are you with team communication right now?',
-    hint: '1 = very dissatisfied, 5 = very satisfied.',
-    min: 'Very dissatisfied',
-    max: 'Very satisfied',
-  },
-  {
-    id: 'challenge',
-    type: 'options',
-    text: 'What is your biggest challenge at the moment?',
-    hint: 'Choose the one that fits best.',
-    options: [
-      'Too many meetings / not enough focus time',
-      'Unclear priorities or shifting goals',
-      'Lack of tools or resources',
-      'Cross-team communication gaps',
-      'Workload is too high',
-      'Something else',
-    ],
-  },
-  {
-    id: 'suggestion',
-    type: 'textarea',
-    text: 'What\'s one thing we could do to improve how the team works?',
-    hint: 'Optional — but your candid input makes a real difference.',
-    placeholder: 'Share your idea or feedback…',
-    optional: true,
-  },
-];
+const ROLE_META = {
+  service_coordinator:{icon:'📋',name:'Service Coordinator',focus:'Scheduling, dispatch and keeping jobs moving',questions:[{id:'rc1',label:'How much time each day do you spend coordinating technician schedules, assigning jobs, or managing dispatch?',hint:'Think about the back-and-forth — calls, messages, system updates.',ph:'e.g. Probably 2–3 hours across the day, mostly reactive rather than planned…'},{id:'rc2',label:'How do you find out whether a job has been completed, is delayed, or has a problem — and what breaks down in that process?',hint:'Where does communication fail between field and office?',ph:'e.g. Techs don\'t always update the system in real time so I\'m constantly calling to get status…'},{id:'rc3',label:'What information do you find yourself looking up repeatedly to answer client or colleague questions?',hint:'Rate cards, job history, technician availability — what\'s always being hunted for?',ph:'e.g. Checking previous job notes to answer "has this issue been seen before" — takes too long…'},{id:'rc4',label:'When urgent or reactive work comes in, what part of your current process breaks down most?',hint:'Think about what falls apart when unexpected jobs land.',ph:'e.g. Reshuffling the schedule always causes confusion — no one has visibility of the updated plan…'}]},
+  service_manager:{icon:'📊',name:'Service Manager',focus:'Team performance, escalations and operational reporting',questions:[{id:'sm1',label:'What performance or operational reports do you produce regularly, and how long do they take to compile?',hint:'Weekly job summaries, SLA tracking, labour costs — what\'s manual?',ph:'e.g. End-of-week report takes half a day pulling from 3 different systems…'},{id:'sm2',label:'What types of issues regularly escalate to you that you feel the team should be able to resolve independently?',hint:'What decisions keep landing on your desk that shouldn\'t require your involvement?',ph:'e.g. Technicians escalate scope queries that should be answered by a reference document…'},{id:'sm3',label:'How do you currently track whether jobs are on track, on time, and within cost — and where does that visibility break down?',hint:'What\'s the gap between what you need to know and what you can actually see?',ph:'e.g. I don\'t know a job is going over time until the technician calls — there\'s no early warning…'},{id:'sm4',label:'Where do jobs most commonly fall through the cracks or miss SLA commitments — and what\'s the root cause?',hint:'Think about recurring patterns, not one-off incidents.',ph:'e.g. Follow-up maintenance jobs aren\'t being booked because there\'s no automatic reminder…'}]},
+  administrator:{icon:'📁',name:'Administrator',focus:'Data entry, documents and records management',questions:[{id:'ad1',label:'What data entry tasks do you perform most frequently, and how much time do they consume?',hint:'Think about tasks where you\'re moving information from one place to another.',ph:'e.g. Re-keying job details from emails into the system — probably an hour a day cumulatively…'},{id:'ad2',label:'What documents do you prepare repeatedly that follow a similar format or template?',hint:'Letters, reports, summaries, forms — what\'s copy-pasted or rebuilt from scratch each time?',ph:'e.g. Monthly summary report uses the same structure every time but I rebuild it manually…'},{id:'ad3',label:'Where do you spend time chasing information from other people before you can complete your work?',hint:'Who do you regularly wait on, and what\'s the information you need?',ph:'e.g. Can\'t close a job without a sign-off that sometimes takes days to come through…'},{id:'ad4',label:'Where do filing or record-keeping errors most commonly occur, and what causes them?',hint:'Version control, misfiling, duplicate records — what goes wrong?',ph:'e.g. Multiple people saving different versions of the same document causes confusion…'}]},
+  business_administrator:{icon:'🏢',name:'Business Administrator',focus:'Cross-department processes, compliance and governance',questions:[{id:'ba1',label:'Which processes span multiple departments and cause the most friction or delays?',hint:'Think about handoffs — where information gets lost, duplicated or held up.',ph:'e.g. Onboarding a new client requires input from 4 teams but nobody owns the whole process…'},{id:'ba2',label:'Where is information being entered or maintained in more than one place — and what\'s the consequence?',hint:'Duplicate data entry, conflicting records, version control issues.',ph:'e.g. Client contact details exist in three systems and they\'re never all current at the same time…'},{id:'ba3',label:'What approval or sign-off processes create the most delay in the business?',hint:'What\'s regularly bottlenecked waiting for someone\'s sign-off — and why?',ph:'e.g. Purchase approvals sit in email for days because there\'s no defined SLA for responses…'},{id:'ba4',label:'What compliance, regulatory or governance tasks take disproportionate time to complete?',hint:'Licencing, audits, policy reviews, statutory reporting — what\'s labour-intensive?',ph:'e.g. Annual insurance renewal requires hunting down certificates from across the business…'}]},
+  account_manager:{icon:'🤝',name:'Account Manager',focus:'Client relationships, proposals and pipeline management',questions:[{id:'am1',label:'How much time do you spend updating the CRM or logging client interactions — and is that time well spent?',hint:'Think about the gap between what you capture and what you actually need to record.',ph:'e.g. I spend 30+ minutes per day updating records that nobody ever reads back…'},{id:'am2',label:'What\'s your current process for following up on quotes or proposals, and where does it let you down?',hint:'What falls through the cracks, and what requires manual effort to track?',ph:'e.g. I rely on memory and calendar reminders — there\'s no systematic follow-up process…'},{id:'am3',label:'What client requests do you handle repeatedly that follow a very similar pattern each time?',hint:'Standard queries, status updates, document requests — what\'s on rotation?',ph:'e.g. Clients asking for job completion certificates — I produce the same formatted doc every time…'},{id:'am4',label:'How do you prepare for client review meetings, and what part of that preparation takes longest?',hint:'Pulling data, building summaries, chasing updates from internal teams.',ph:'e.g. Building the activity summary takes 2 hours because data is spread across multiple tools…'}]},
+  project_manager:{icon:'🏗️',name:'Project Manager',focus:'Delivery, reporting, variations and coordination',questions:[{id:'pm1',label:'What does your project reporting process look like — how long does it take, and where does the time go?',hint:'Progress reports, cost reports, schedule updates — what\'s manual and time-consuming?',ph:'e.g. Fortnightly progress report takes most of a day pulling costs, schedule and photos together…'},{id:'pm2',label:'How do you manage variations and change orders — where does that process slow down or break down?',hint:'Scope creep, approval delays, pricing changes — where\'s the friction?',ph:'e.g. Variations sit in email chains and I lose track of which ones have been approved…'},{id:'pm3',label:'What takes up your time that feels like it\'s preventing you from focusing on actual project delivery?',hint:'Admin, chasing, reporting, meetings — what\'s the overhead that shouldn\'t be yours?',ph:'e.g. I spend more time chasing purchase order approvals than managing the actual project…'},{id:'pm4',label:'How do you coordinate across subcontractors and suppliers — what fails most often in that process?',hint:'Communication gaps, scheduling conflicts, document management.',ph:'e.g. Subcontractors don\'t confirm attendance until the day before, which affects my planning…'}]},
+  director:{icon:'🎯',name:'Director',focus:'Business visibility, strategy and governance',questions:[{id:'di1',label:'What business information do you struggle to get visibility on without having to chase it manually?',hint:'What should be on a dashboard but requires you to ask someone or dig through files?',ph:'e.g. I can\'t see live project margin without asking the PM and waiting for a manual report…'},{id:'di2',label:'What approvals are regularly bottlenecked on you — and is there a pattern in why they land on your desk?',hint:'What decisions keep coming to you that should be handled at a lower level?',ph:'e.g. Purchase orders over $500 require my sign-off, which creates a daily queue of minor approvals…'},{id:'di3',label:'What business reporting is most often out of date or takes too long to compile when you need it?',hint:'Financial, operational, or client reporting — what\'s always behind?',ph:'e.g. Monthly P&L takes until the 15th to arrive, which means I\'m always looking backwards…'},{id:'di4',label:'Where do you see the same problems recurring across the business — and what\'s the underlying cause?',hint:'Persistent patterns that tell you something structural needs to change.',ph:'e.g. We keep having billing delays because the field-to-office information loop is broken…'}]},
+  estimator:{icon:'🔢',name:'Estimator',focus:'Quoting, pricing and scope analysis',questions:[{id:'es1',label:'How long does a typical quote take to produce, and where is most of that time spent?',hint:'Break it down — scope review, supplier pricing, formatting, internal review.',ph:'e.g. A mid-size quote takes 4–6 hours, mostly waiting on supplier pricing and then formatting…'},{id:'es2',label:'How do you gather supplier or subcontractor pricing — and what\'s inefficient about that process?',hint:'Phone calls, emails, online portals — what slows you down?',ph:'e.g. Emailing 5–6 suppliers and chasing responses over days — no consistency in how they respond…'},{id:'es3',label:'How often do you revise or re-do quotes after submission, and what drives those revisions?',hint:'Scope changes, incorrect assumptions, pricing errors — what\'s the pattern?',ph:'e.g. About 30% of quotes need a revision, usually because the scope wasn\'t clear in the brief…'},{id:'es4',label:'What reference material do you find yourself looking up repeatedly when building a quote?',hint:'Rate schedules, material costs, historical project data — what\'s never where you need it?',ph:'e.g. I keep a personal spreadsheet of common rates because the official one is never current…'}]},
+  accounts_admin:{icon:'💰',name:'Accounts Admin / Financial Controller',focus:'Invoicing, reconciliation and financial reporting',questions:[{id:'ac1',label:'How much time do you spend processing invoices, matching purchase orders, or reconciling payments — and what makes it slow?',hint:'Think about where the manual effort sits and what causes delays or errors.',ph:'e.g. Matching supplier invoices to POs takes hours because POs aren\'t always raised before work starts…'},{id:'ac2',label:'What does your debtor follow-up process look like — where does it break down and what\'s the impact?',hint:'Outstanding invoices, payment terms, escalation process.',ph:'e.g. No systematic follow-up process — I check the aged debtor report and manually send reminder emails…'},{id:'ac3',label:'What does month-end or period-end close look like — where are the bottlenecks?',hint:'WIP, accruals, reconciliations — what consistently holds up the close?',ph:'e.g. WIP takes the longest because PMs don\'t submit completed job data on time…'},{id:'ac4',label:'What financial reporting takes the most time to compile, and how current is it when it reaches the people who need it?',hint:'P&L, cash flow, job cost reports — what\'s always late or always manual?',ph:'e.g. Project cost reports are always a week behind because they\'re built manually in Excel…'}]}
+};
 
-// ── State ─────────────────────────────────────────────────────
-let step = 0;
-const answers = {};
+let state={}, currentStep=1;
+const STEP_NAMES=['About you','Where time goes','Your role in depth','Repetition & errors','Knowledge & systems','Your wishlist'];
 
-// ── Render ────────────────────────────────────────────────────
-function render() {
-  if (step >= QUESTIONS.length) { renderDone(); return; }
-  const q = QUESTIONS[step];
-  const pct = Math.round((step / QUESTIONS.length) * 100);
+function pickRole(el,k){document.querySelectorAll('#roleGrid .radio-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');state.role=k;}
+function pick(el,name){document.querySelectorAll(`.radio-card input[name="${name}"]`).forEach(i=>i.closest('.radio-card').classList.remove('selected'));el.classList.add('selected');state[name]=el.querySelector('.radio-main').textContent.trim();}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
 
-  let body = '';
-
-  // Header (shown on first step only)
-  if (step === 0) {
-    body += `
-      <div class="survey-header">
-        <div class="survey-tag">Team Pulse · Q2 2026</div>
-        <div class="survey-title">Quick team check-in</div>
-        <div class="survey-desc">5 questions · takes about 2 minutes · responses are anonymous</div>
-      </div>`;
-  }
-
-  // Progress
-  body += `
-    <div class="progress-wrap">
-      <div class="progress-meta">
-        <span>Question ${step + 1} of ${QUESTIONS.length}</span>
-        <span>${pct}% complete</span>
-      </div>
-      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-    </div>`;
-
-  // Question
-  body += `<div class="q-label">Q${step + 1}</div>`;
-  body += `<div class="q-text">${q.text}</div>`;
-  if (q.hint) body += `<div class="q-hint">${q.hint}</div>`;
-
-  // Input
-  if (q.type === 'text') {
-    body += `<input type="text" id="ans" placeholder="${q.placeholder}" value="${answers[q.id] || ''}" />`;
-  } else if (q.type === 'textarea') {
-    body += `<textarea id="ans" placeholder="${q.placeholder}">${answers[q.id] || ''}</textarea>`;
-  } else if (q.type === 'select') {
-    body += `<select id="ans">
-      <option value="">— select one —</option>
-      ${q.options.map(o => `<option value="${o}"${answers[q.id] === o ? ' selected' : ''}>${o}</option>`).join('')}
-    </select>`;
-  } else if (q.type === 'scale') {
-    body += `<div class="scale-row">
-      ${[1,2,3,4,5].map(n => `<button class="scale-btn${answers[q.id] === n ? ' on' : ''}" onclick="pickScale(${n})">${n}</button>`).join('')}
-    </div>
-    <div class="scale-ends"><span>${q.min}</span><span>${q.max}</span></div>`;
-  } else if (q.type === 'options') {
-    body += q.options.map(o =>
-      `<button class="option-btn${answers[q.id] === o ? ' on' : ''}" onclick="pickOption('${o.replace(/'/g, "\\'")}')">${o}</button>`
-    ).join('');
-  }
-
-  body += `<div class="error-msg" id="err">Please answer this question to continue.</div>`;
-
-  // Nav
-  body += `<div class="nav-row">`;
-  if (step > 0) body += `<button class="btn-back" onclick="goBack()">← Back</button>`;
-  const isLast = step === QUESTIONS.length - 1;
-  body += `<button class="btn-next" id="btn-next" onclick="goNext()">${isLast ? 'Submit survey →' : 'Next →'}</button>`;
-  body += `</div>`;
-
-  document.getElementById('card').innerHTML = body;
+function updateProgress(n){
+  currentStep=n;
+  document.getElementById('stepNum').textContent=n;
+  document.getElementById('stepName').textContent=STEP_NAMES[n-1];
+  for(let i=1;i<=6;i++){const e=document.getElementById('ps'+i);e.className='progress-step';if(i<n)e.classList.add('done');else if(i===n)e.classList.add('active');}
 }
 
-function pickScale(n) {
-  answers[QUESTIONS[step].id] = n;
-  render();
+function buildRoleIntro(){
+  if(!state.role)return;
+  const m=ROLE_META[state.role];
+  const el=document.getElementById('roleIntro2');
+  if(el)el.innerHTML=`<div class="role-intro"><div class="role-icon">${m.icon}</div><div><div class="role-intro-name">${m.name}</div><div class="role-intro-sub">${m.focus}</div></div></div>`;
 }
 
-function pickOption(val) {
-  answers[QUESTIONS[step].id] = val;
-  render();
+function buildRoleQuestions(){
+  if(!state.role)return;
+  const m=ROLE_META[state.role];
+  document.getElementById('step3Intro').textContent=`The following questions are focused on the specific pressures and bottlenecks common in the ${m.name} role.`;
+  document.getElementById('roleQuestions').innerHTML=m.questions.map((q,i)=>`
+    <div class="field">
+      <div class="field-label"><span class="q-num">${i+1}</span>${q.label}</div>
+      ${q.hint?`<div class="field-hint">${q.hint}</div>`:''}
+      <textarea id="${q.id}" placeholder="${q.ph}"></textarea>
+    </div>`).join('');
 }
 
-function goBack() {
-  if (step > 0) { step--; render(); }
-}
-
-function goNext() {
-  const q = QUESTIONS[step];
-
-  // Read text/textarea/select answers
-  if (['text','textarea','select'].includes(q.type)) {
-    const el = document.getElementById('ans');
-    if (el) answers[q.id] = el.value.trim();
-  }
-
-  // Validate required
-  const val = answers[q.id];
-  if (!q.optional && (val === undefined || val === '' || val === null)) {
-    const err = document.getElementById('err');
-    if (err) { err.style.display = 'block'; }
-    return;
-  }
-
-  step++;
-  if (step >= QUESTIONS.length) {
-    submitSurvey();
-  } else {
-    render();
-  }
-}
-
-// ── Submit ─────────────────────────────────────────────────────
-async function submitSurvey() {
-  // Show loading state
-  document.getElementById('card').innerHTML = `
-    <div style="text-align:center; padding: 3rem 0;">
-      <div style="font-family:'Helvetica Neue',sans-serif; font-size:14px; color:#999;">Submitting your response…</div>
-    </div>`;
-
-  const payload = {
-    name:         answers.name         || null,
-    department:   answers.department,
-    satisfaction: answers.satisfaction,
-    challenge:    answers.challenge,
-    suggestion:   answers.suggestion   || null,
+function goTo(n){
+  const v={
+    2:()=>{if(!state.role){alert('Please select your role to continue.');return false;}return true;},
+    3:()=>{if(!val('f_time1')){alert('Please answer question 1 before continuing.');return false;}return true;},
+    4:()=>true,
+    5:()=>{if(!val('f_rep1')){alert('Please answer question 1 before continuing.');return false;}return true;},
+    6:()=>{if(!val('f_know1')){alert('Please answer question 1 before continuing.');return false;}return true;}
   };
-
-  const { error } = await db.from('survey_responses').insert([payload]);
-
-  if (error) {
-    document.getElementById('card').innerHTML = `
-      <div style="text-align:center; padding:2rem 0;">
-        <div style="font-family:'Helvetica Neue',sans-serif; font-size:14px; color:#c0392b; margin-bottom:1rem;">
-          Something went wrong — please try again.
-        </div>
-        <div style="font-family:'Helvetica Neue',sans-serif; font-size:12px; color:#bbb;">${error.message}</div>
-        <button class="btn-next" style="max-width:180px;margin:1.5rem auto 0;display:block;" onclick="step=0;render()">Start over</button>
-      </div>`;
-    return;
-  }
-
-  renderDone();
+  if(v[n]&&!v[n]())return;
+  document.getElementById('step'+currentStep).style.display='none';
+  document.getElementById('step'+n).style.display='block';
+  updateProgress(n);
+  if(n===2)buildRoleIntro();
+  if(n===3)buildRoleQuestions();
+  window.scrollTo(0,0);
 }
 
-// ── Thank you ──────────────────────────────────────────────────
-function renderDone() {
-  document.getElementById('card').innerHTML = `
-    <div class="thankyou">
-      <div class="thankyou-icon">✓</div>
-      <h2>Thank you!</h2>
-      <p>Your response has been recorded. We really appreciate you taking the time — your input helps the team improve.</p>
-    </div>`;
+function calcScore(){
+  const m=ROLE_META[state.role];
+  let filled=0;
+  m.questions.forEach(q=>{if(val(q.id))filled++;});
+  const roleDetail=Math.round((filled/m.questions.length)*25);
+  const textLen=val('f_time1').length+val('f_err1').length+val('f_know1').length+val('f_wish1').length;
+  const textScore=Math.min(25,Math.round((textLen/800)*25));
+  const rMap={'Most is real work':5,'Fairly balanced':15,'More overhead than real work':22,'Mostly overhead':25};
+  const eMap={'Minor — easily fixed with no real consequence':5,'Moderate — causes rework, delays, or client frustration':15,'Significant — financial, contractual, or reputational impact':25,'Varies — depends on the task and who catches it':12};
+  const dMap={'Well documented':5,'Partially documented':12,'Mostly undocumented':20,'No documentation at all':25};
+  const rs=rMap[state.ratio]||10, es=eMap[state.err_impact]||10, ds=dMap[state.doc_level]||10;
+  return{pct:Math.min(100,Math.round((roleDetail+textScore+Math.round((rs+es+ds)/3))*1.2)),ratioScore:rs,errScore:es,docScore:ds,roleDetail};
 }
 
-// ── Init ───────────────────────────────────────────────────────
-render();
+function getPriority(s){
+  if(s>=70)return{label:'High priority',cls:'badge-high',desc:'This role shows significant bottleneck indicators. A strong candidate for process review and automation.'};
+  if(s>=40)return{label:'Medium priority',cls:'badge-med',desc:'Some bottleneck indicators present — worth investigating alongside higher-priority roles.'};
+  return{label:'Lower priority',cls:'badge-low',desc:'Fewer bottleneck indicators in current responses. May still have specific pain points worth noting.'};
+}
+
+async function submitSurvey(){
+  document.getElementById('formSection').style.display='none';
+  document.getElementById('loadingSection').style.display='block';
+  window.scrollTo(0,0);
+  const m=ROLE_META[state.role];
+  const s=calcScore();
+  const ra={};
+  m.questions.forEach(q=>{const v=val(q.id);if(v)ra[q.id]=v;});
+  const payload={
+    name:val('f_name')||null, role:state.role, role_name:m.name, score:s.pct,
+    time1:val('f_time1')||null, time2:val('f_time2')||null, ratio:state.ratio||null,
+    role_answers:Object.keys(ra).length?ra:null,
+    rep1:val('f_rep1')||null, err1:val('f_err1')||null, err_impact:state.err_impact||null, rep2:val('f_rep2')||null,
+    know1:val('f_know1')||null, know2:val('f_know2')||null, sys1:val('f_sys1')||null, doc_level:state.doc_level||null,
+    wish1:val('f_wish1')||null, wish2:val('f_wish2')||null, visibility:state.visibility||null, extra:val('f_extra')||null
+  };
+  const{error}=await db.from('survey_responses').insert([payload]);
+  document.getElementById('loadingSection').style.display='none';
+  if(error){document.getElementById('formSection').style.display='block';alert('Submission failed: '+error.message+'\n\nPlease check config.js and try again.');return;}
+  showResult(s);
+}
+
+function showResult(s){
+  const p=getPriority(s.pct);
+  const cc=s.pct>=70?'score-high':s.pct>=40?'score-mid':'score-low';
+  const m=ROLE_META[state.role];
+  const dims=[{label:'Role depth',val:s.roleDetail,max:25},{label:'Overhead ratio',val:s.ratioScore,max:25},{label:'Error impact',val:s.errScore,max:25},{label:'Documentation',val:s.docScore,max:25}];
+  document.getElementById('resultContent').innerHTML=`
+    <div class="score-hero">
+      <div class="score-circle ${cc}">${s.pct}%</div>
+      <div><div class="score-title">${m.name}</div><div style="margin-bottom:6px"><span class="priority-badge ${p.cls}">${p.label}</span></div><div class="score-desc">${p.desc}</div></div>
+    </div>
+    <div class="dim-grid">${dims.map(d=>`<div class="dim-card"><div class="dim-label">${d.label}</div><div class="dim-value">${Math.round((d.val/d.max)*100)}%</div><div class="dim-bar"><div class="dim-bar-fill" style="width:${Math.round((d.val/d.max)*100)}%"></div></div></div>`).join('')}</div>`;
+  document.getElementById('resultSection').style.display='block';
+  window.scrollTo(0,0);
+}
+
+function startNew(){
+  state={};
+  document.getElementById('resultSection').style.display='none';
+  document.querySelectorAll('textarea,input[type=text]').forEach(e=>e.value='');
+  document.querySelectorAll('.radio-card').forEach(e=>e.classList.remove('selected'));
+  document.querySelectorAll('.step').forEach(e=>e.style.display='none');
+  document.getElementById('step1').style.display='block';
+  updateProgress(1);
+  document.getElementById('formSection').style.display='block';
+  window.scrollTo(0,0);
+}
 </script>
 </body>
 </html>
